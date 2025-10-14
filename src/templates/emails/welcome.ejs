@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Welcome to Hamsoya!</title>
+    <style>
+      /* Same base styles */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        line-height: 1.6;
+        color: #333333;
+        background-color: #ececec;
+        margin: 0;
+        padding: 0;
+        width: 100% !important;
+        min-width: 100%;
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+      }
+
+      table {
+        border-collapse: collapse;
+        mso-table-lspace: 0pt;
+        mso-table-rspace: 0pt;
+      }
+
+      img {
+        border: 0;
+        height: auto;
+        line-height: 100%;
+        outline: none;
+        text-decoration: none;
+        -ms-interpolation-mode: bicubic;
+      }
+
+      .email-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ececec;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .background-layer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+      }
+
+      .gradient-primary {
+        background: linear-gradient(180deg, #22c55e 0%, #fff 46.48%);
+        filter: blur(50px);
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 2;
+      }
+
+      .gradient-secondary {
+        background: linear-gradient(
+          180deg,
+          #4d5de9 11.31%,
+          rgba(255, 255, 255, 0) 46.48%
+        );
+        filter: blur(50px);
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 3;
+      }
+
+      .content-wrapper {
+        position: relative;
+        z-index: 10;
+        padding: 40px 20px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        margin: 60px 20px;
+        border-radius: 16px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+
+      .logo {
+        font-size: 32px;
+        font-weight: 700;
+        color: #4d5de9;
+        margin-bottom: 8px;
+        text-decoration: none;
+      }
+
+      .tagline {
+        font-size: 14px;
+        color: #666666;
+        margin-bottom: 30px;
+      }
+
+      .main-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: #333333;
+        margin-bottom: 16px;
+        line-height: 1.3;
+      }
+
+      .subtitle {
+        font-size: 16px;
+        color: #666666;
+        margin-bottom: 40px;
+        line-height: 1.5;
+      }
+
+      .welcome-container {
+        background: linear-gradient(135deg, #22c55e 0%, #4d5de9 100%);
+        border-radius: 12px;
+        padding: 30px;
+        text-align: center;
+        margin: 40px 0;
+        box-shadow: 0 8px 24px rgba(34, 197, 94, 0.3);
+      }
+
+      .welcome-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+      }
+
+      .welcome-message {
+        font-size: 18px;
+        font-weight: 600;
+        color: #ffffff;
+        margin-bottom: 8px;
+      }
+
+      .welcome-subtext {
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .features {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 24px;
+        margin: 30px 0;
+        border-left: 4px solid #22c55e;
+      }
+
+      .features h3 {
+        font-size: 16px;
+        color: #333333;
+        margin-bottom: 16px;
+        font-weight: 600;
+      }
+
+      .feature-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .feature-list li {
+        margin-bottom: 12px;
+        font-size: 14px;
+        line-height: 1.5;
+        color: #555555;
+        display: flex;
+        align-items: center;
+      }
+
+      .feature-list li::before {
+        content: '✓';
+        color: #22c55e;
+        font-weight: bold;
+        margin-right: 12px;
+        font-size: 16px;
+      }
+
+      .cta-container {
+        text-align: center;
+        margin: 30px 0;
+      }
+
+      .cta-button {
+        display: inline-block;
+        background: linear-gradient(135deg, #4d5de9 0%, #22c55e 100%);
+        color: #ffffff;
+        text-decoration: none;
+        padding: 16px 32px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 16px;
+        box-shadow: 0 4px 12px rgba(77, 93, 233, 0.3);
+        transition: transform 0.2s ease;
+      }
+
+      .cta-button:hover {
+        transform: translateY(-2px);
+      }
+
+      .footer {
+        text-align: center;
+        margin-top: 40px;
+        padding-top: 30px;
+        border-top: 1px solid #e5e5e5;
+      }
+
+      .footer p {
+        font-size: 12px;
+        color: #888888;
+        margin: 8px 0;
+        line-height: 1.4;
+      }
+
+      .footer a {
+        color: #4d5de9;
+        text-decoration: none;
+      }
+
+      .footer a:hover {
+        text-decoration: underline;
+      }
+
+      @media only screen and (max-width: 600px) {
+        .email-container {
+          width: 100% !important;
+          max-width: 100% !important;
+        }
+
+        .content-wrapper {
+          margin: 20px 10px !important;
+          padding: 30px 16px !important;
+          border-radius: 12px !important;
+        }
+
+        .main-title {
+          font-size: 24px !important;
+        }
+
+        .welcome-container {
+          padding: 24px 16px !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="background-layer">
+        <div class="gradient-primary"></div>
+        <div class="gradient-secondary"></div>
+      </div>
+
+      <div class="content-wrapper">
+        <div class="header">
+          <div class="logo">Hamsoya</div>
+          <div class="tagline">Your trusted marketplace</div>
+        </div>
+
+        <h1 class="main-title">Welcome to Hamsoya! 🎉</h1>
+        <p class="subtitle">
+          Hi <%= name %>,<br />
+          Congratulations! Your account has been successfully verified and you're now part of the Hamsoya community. 
+          We're excited to have you on board!
+        </p>
+
+        <div class="welcome-container">
+          <div class="welcome-icon">🌟</div>
+          <div class="welcome-message">Your Account is Ready!</div>
+          <div class="welcome-subtext">Start exploring organic products today</div>
+        </div>
+
+        <div class="features">
+          <h3>What you can do now:</h3>
+          <ul class="feature-list">
+            <li>Browse thousands of organic products</li>
+            <li>Connect with trusted sellers</li>
+            <li>Enjoy secure and fast checkout</li>
+            <li>Track your orders in real-time</li>
+            <li>Join our community of organic food lovers</li>
+          </ul>
+        </div>
+
+        <div class="cta-container">
+          <a href="<%= process.env.FRONTEND_URL || 'http://localhost:3000' %>" class="cta-button">
+            Start Shopping Now
+          </a>
+        </div>
+
+        <div class="footer">
+          <p>Welcome to the Hamsoya family! We're here to help you discover the best organic products.</p>
+          <p>
+            If you have any questions, please contact us at
+            <a href="mailto:support@hamsoya.com">support@hamsoya.com</a>
+          </p>
+          <p>
+            © 2024 Hamsoya. All rights reserved.<br />
+            <a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a> |
+            <a href="#">Unsubscribe</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

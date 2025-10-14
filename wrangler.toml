@@ -1,0 +1,67 @@
+name = "hamsoya-backend"
+main = "src/index.ts"
+compatibility_date = "2024-12-18"
+compatibility_flags = ["nodejs_compat"]
+
+# Wrangler v4 configuration
+minify = false
+
+# Development environment
+[env.development]
+name = "hamsoya-backend-dev"
+[env.development.vars]
+NODE_ENV = "development"
+FRONTEND_URL = "http://localhost:3000"
+BACKEND_URL = "http://localhost:8787"
+
+# Production environment
+[env.production]
+name = "hamsoya-backend-prod"
+[env.production.vars]
+NODE_ENV = "production"
+FRONTEND_URL = "https://hamsoya.com"
+BACKEND_URL = "https://hamsoya.com"
+
+# Default environment variables (use wrangler secret put for sensitive values)
+[vars]
+NODE_ENV = "development"
+FRONTEND_URL = "http://localhost:3000"
+BACKEND_URL = "http://localhost:8787"
+
+# KV namespaces for session storage if needed
+# [[kv_namespaces]]
+# binding = "SESSIONS"
+# id = "your-kv-namespace-id"
+# preview_id = "your-preview-kv-namespace-id"
+
+# Durable Objects if needed for real-time features
+# [[durable_objects.bindings]]
+# name = "CHAT_ROOMS"
+# class_name = "ChatRoom"
+
+# R2 buckets for file storage if needed
+# [[r2_buckets]]
+# binding = "UPLOADS"
+# bucket_name = "hamsoya-uploads"
+
+# Build configuration
+[build]
+command = "bun run build"
+
+# Routes for production deployment
+[[routes]]
+pattern = "hamsoya.com/api/*"
+zone_name = "hamsoya.com"
+
+[[routes]]
+pattern = "hamsoya.com/trpc/*"
+zone_name = "hamsoya.com"
+
+# Limits and performance
+[limits]
+cpu_ms = 50000
+
+# Analytics
+# [analytics_engine_datasets]
+# [[analytics_engine_datasets]]
+# binding = "ANALYTICS"

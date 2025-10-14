@@ -1,0 +1,28 @@
+name = "hamsoya-backend-main-dev"
+main = "src/index-main-dev.ts"
+compatibility_date = "2024-12-18"
+compatibility_flags = ["nodejs_compat"]
+
+# Development environment
+[env.development]
+name = "hamsoya-backend-main-dev"
+[env.development.vars]
+NODE_ENV = "development"
+FRONTEND_URL = "http://localhost:3000"
+BACKEND_URL = "http://localhost:8787"
+
+# Default environment variables
+[vars]
+NODE_ENV = "development"
+FRONTEND_URL = "http://localhost:3000"
+BACKEND_URL = "http://localhost:8787"
+
+# Development secrets (use wrangler secret put for actual values)
+# JWT_ACCESS_SECRET = "dev-access-secret"
+# JWT_REFRESH_SECRET = "dev-refresh-secret"
+# DATABASE_URL = "postgresql://..."
+# REDIS_URL = "redis://..."
+
+# Limits and performance
+[limits]
+cpu_ms = 50000
