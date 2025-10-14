@@ -26,7 +26,8 @@ BACKEND_URL = "https://hamsoya.com"
 [vars]
 NODE_ENV = "development"
 FRONTEND_URL = "http://localhost:3000"
-BACKEND_URL = "http://localhost:8787"
+BACKEND_URL = "http://localhost:5000"
+REDIS_URL = "rediss://default:AX2EAAIjcDFhODQxOWZmYTMzMDg0ZDkxOTMyNTNiMDQ5MDk2OTJhM3AxMA@civil-tetra-32132.upstash.io:6379"
 
 # KV namespaces for session storage if needed
 # [[kv_namespaces]]
