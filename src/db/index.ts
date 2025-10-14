@@ -14,7 +14,7 @@ export const createDbConnection = (databaseUrl: string) => {
 
   // Create new connection
   const sql = neon(databaseUrl);
-  const db = drizzle(sql, { schema });
+  const db = drizzle(sql as any, { schema } as any);
 
   // Store in pool
   dbConnectionPool.set(databaseUrl, db);

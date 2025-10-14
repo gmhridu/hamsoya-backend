@@ -10,7 +10,7 @@ export const errorHandler = (err: Error, c: Context) => {
     return c.json(
       {
         error: 'Validation Error',
-        details: err.errors.map(e => ({
+        details: err.issues.map(e => ({
           field: e.path.join('.'),
           message: e.message,
         })),

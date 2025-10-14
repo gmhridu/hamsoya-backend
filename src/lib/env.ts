@@ -17,7 +17,7 @@ const envSchema = z.object({
 
   // SMTP Configuration
   SMTP_HOST: z.string().default('smtp.gmail.com'),
-  SMTP_PORT: z.string().transform(val => parseInt(val, 10)).pipe(z.number().int().positive()).default('465'),
+  SMTP_PORT: z.string().transform(val => parseInt(val, 10)).pipe(z.number().int().positive()).default(465),
   SMTP_SERVICE: z.string().default('gmail'),
   SMTP_USER: z.string().email('Invalid SMTP user email'),
   SMTP_PASSWORD: z.string().min(1, 'SMTP password is required'),
@@ -34,7 +34,7 @@ const envSchema = z.object({
   // Session Configuration
   SESSION_SECRET: z.string().min(32, 'Session secret must be at least 32 characters'),
   SESSION_NAME: z.string().default('hamsoya_session'),
-  SESSION_MAX_AGE: z.string().transform(val => parseInt(val, 10)).pipe(z.number().int().positive()).default('86400000'),
+  SESSION_MAX_AGE: z.string().transform(val => parseInt(val, 10)).pipe(z.number().int().positive()).default(86400000),
 
   // Optional ImageKit configuration (for reference)
   IMAGEKIT_PUBLIC_KEY: z.string().optional(),
@@ -50,7 +50,7 @@ export const validateEnv = (env: Record<string, any>): Env => {
     return envSchema.parse(env);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessages = error.errors.map(err =>
+      const errorMessages = error.issues.map(err =>
         `${err.path.join('.')}: ${err.message}`
       ).join('\n');
 
