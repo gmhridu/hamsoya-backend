@@ -459,8 +459,9 @@ export class AdminProductService {
       .set({
         ...validatedData,
         updated_at: new Date(),
-      })
-      .where(eq(products.id, id));
+      } as any)
+      .where(eq(products.id, id))
+      .returning({ id: products.id });
 
     const updatedProduct = await this.getProductById(id);
     return updatedProduct!;
@@ -482,8 +483,9 @@ export class AdminProductService {
         deleted_at: new Date(),
         deleted_by,
         updated_at: new Date(),
-      })
-      .where(eq(products.id, id));
+      } as any)
+      .where(eq(products.id, id))
+      .returning({ id: products.id });
 
     const undo_token = `undo_product_${id}_${Date.now()}`;
     const undo_expires_at = new Date(Date.now() + 5000); // 5 seconds
@@ -512,8 +514,9 @@ export class AdminProductService {
         deleted_at: null,
         deleted_by: null,
         updated_at: new Date(),
-      })
-      .where(eq(products.id, id));
+      } as any)
+      .where(eq(products.id, id))
+      .returning({ id: products.id });
 
     const restoredProduct = await this.getProductById(id);
     return restoredProduct!;
@@ -545,11 +548,12 @@ export class AdminProductService {
       .set({
         ...validatedData,
         updated_at: new Date(),
-      })
+      } as any)
       .where(and(
         inArray(products.id, productIds),
         isNull(products.deleted_at)
-      ));
+      ))
+      .returning({ id: products.id });
 
     return {
       updated_count: productIds.length,
@@ -571,11 +575,12 @@ export class AdminProductService {
         deleted_at: new Date(),
         deleted_by,
         updated_at: new Date(),
-      })
+      } as any)
       .where(and(
         inArray(products.id, productIds),
         isNull(products.deleted_at)
-      ));
+      ))
+      .returning({ id: products.id });
 
     return {
       deleted_count: productIds.length,

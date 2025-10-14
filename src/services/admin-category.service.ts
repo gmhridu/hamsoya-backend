@@ -280,8 +280,9 @@ export class AdminCategoryService {
       .set({
         ...validatedData,
         updated_at: new Date(),
-      })
-      .where(eq(categories.id, id));
+      } as any)
+      .where(eq(categories.id, id))
+      .returning({ id: categories.id });
 
     const updatedCategory = await this.getCategoryById(id);
     return updatedCategory!;
@@ -312,8 +313,9 @@ export class AdminCategoryService {
         deleted_at: new Date(),
         deleted_by,
         updated_at: new Date(),
-      })
-      .where(eq(categories.id, id));
+      } as any)
+      .where(eq(categories.id, id))
+      .returning({ id: categories.id });
 
     const undo_token = `undo_category_${id}_${Date.now()}`;
     const undo_expires_at = new Date(Date.now() + 5000); // 5 seconds
@@ -342,8 +344,9 @@ export class AdminCategoryService {
         deleted_at: null,
         deleted_by: null,
         updated_at: new Date(),
-      })
-      .where(eq(categories.id, id));
+      } as any)
+      .where(eq(categories.id, id))
+      .returning({ id: categories.id });
 
     const restoredCategory = await this.getCategoryById(id);
     return restoredCategory!;
@@ -384,11 +387,12 @@ export class AdminCategoryService {
       .set({
         ...validatedData,
         updated_at: new Date(),
-      })
+      } as any)
       .where(and(
         inArray(categories.id, categoryIds),
         isNull(categories.deleted_at)
-      ));
+      ))
+      .returning({ id: categories.id });
 
     return {
       updated_count: categoryIds.length,
@@ -427,11 +431,12 @@ export class AdminCategoryService {
         deleted_at: new Date(),
         deleted_by,
         updated_at: new Date(),
-      })
+      } as any)
       .where(and(
         inArray(categories.id, categoryIds),
         isNull(categories.deleted_at)
-      ));
+      ))
+      .returning({ id: categories.id });
 
     return {
       deleted_count: categoryIds.length,

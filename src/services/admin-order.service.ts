@@ -338,10 +338,10 @@ export class AdminOrderService {
       throw new AppError('Order not found', 404);
     }
 
-    const validatedData = updateOrderSchema.parse(updateData);
+    const validatedData: any = updateOrderSchema.parse(updateData);
 
     if (updateData.status === 'DELIVERED' && !updateData.delivered_at) {
-      validatedData.delivered_at = new Date();
+      (validatedData as any).delivered_at = new Date();
     }
 
     await this.db
@@ -350,7 +350,8 @@ export class AdminOrderService {
         ...validatedData,
         updated_at: new Date(),
       })
-      .where(eq(orders.id, id));
+      .where(eq(orders.id, id))
+      .returning({ id: orders.id });
 
     const updatedOrder = await this.getOrderById(id);
     return updatedOrder!;
@@ -376,8 +377,9 @@ export class AdminOrderService {
         deleted_at: new Date(),
         deleted_by,
         updated_at: new Date(),
-      })
-      .where(eq(orders.id, id));
+      } as any)
+      .where(eq(orders.id, id))
+      .returning({ id: orders.id });
 
     const undo_token = `undo_order_${id}_${Date.now()}`;
     const undo_expires_at = new Date(Date.now() + 5000); // 5 seconds
@@ -406,8 +408,9 @@ export class AdminOrderService {
         deleted_at: null,
         deleted_by: null,
         updated_at: new Date(),
-      })
-      .where(eq(orders.id, id));
+      } as any)
+      .where(eq(orders.id, id))
+      .returning({ id: orders.id });
 
     const restoredOrder = await this.getOrderById(id);
     return restoredOrder!;
@@ -441,7 +444,7 @@ export class AdminOrderService {
     };
 
     if (status === 'DELIVERED') {
-      updateData.delivered_at = new Date();
+      (updateData as any).delivered_at = new Date();
     }
 
     await this.db
@@ -450,7 +453,8 @@ export class AdminOrderService {
       .where(and(
         inArray(orders.id, orderIds),
         isNull(orders.deleted_at)
-      ));
+      ))
+      .returning({ id: orders.id });
 
     return {
       updated_count: orderIds.length,

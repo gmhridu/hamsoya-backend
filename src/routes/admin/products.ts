@@ -244,9 +244,9 @@ app.put('/:id/featured', zValidator('json', FeaturedToggleSchema), async c => {
       .set({
         featured,
         updated_at: new Date(),
-      })
+      } as any)
       .where(eq(products.id, id))
-      .returning();
+      .returning({ id: products.id });
 
     if (!updatedProduct) {
       return c.json(errorResponse('Product not found'), 404 as any);

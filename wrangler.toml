@@ -65,3 +65,13 @@ cpu_ms = 50000
 # [analytics_engine_datasets]
 # [[analytics_engine_datasets]]
 # binding = "ANALYTICS"
+
+[observability]
+enabled = false
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true

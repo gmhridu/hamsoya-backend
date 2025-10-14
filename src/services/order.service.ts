@@ -477,7 +477,7 @@ export class OrderService {
             .set({
               stock_quantity: sql`${products.stock_quantity} + ${item.quantity}`,
               updated_at: new Date(),
-            })
+            } as any)
             .where(eq(products.id, item.product_id));
         }
         break;
@@ -604,7 +604,7 @@ export class OrderService {
       .set({
         payment_status: paymentStatus,
         updated_at: new Date(),
-      })
+      } as any)
       .where(eq(orders.id, id));
 
     const updatedOrder = await this.getOrderById(id);

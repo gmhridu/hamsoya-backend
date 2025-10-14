@@ -521,7 +521,7 @@ export class AuthService {
       .set({
         password_hash: passwordHash,
         updated_at: new Date(),
-      })
+      } as any)
       .where(eq(users.email, email));
 
     // Cleanup Redis

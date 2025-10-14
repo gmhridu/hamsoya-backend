@@ -130,7 +130,7 @@ export const userSessions = pgTable(
 );
 
 // Zod schemas for validation
-export const insertUserSchema = createInsertSchema(users as any, {
+export const insertUserSchema = createInsertSchema(users, {
   email: z.string().email(),
   name: z.string().min(2).max(255),
   role: z.enum(['USER', 'SELLER', 'ADMIN']),
@@ -146,21 +146,21 @@ export const insertUserSchema = createInsertSchema(users as any, {
   created_by: z.string().optional(),
 });
 
-export const selectUserSchema = createSelectSchema(users as any as any);
+export const selectUserSchema = createSelectSchema(users);
 
 
 
-export const insertRefreshTokenSchema = createInsertSchema(refreshTokens as any as any);
-export const selectRefreshTokenSchema = createSelectSchema(refreshTokens as any as any);
+export const insertRefreshTokenSchema = createInsertSchema(refreshTokens);
+export const selectRefreshTokenSchema = createSelectSchema(refreshTokens);
 
-export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens as any as any);
-export const selectPasswordResetTokenSchema = createSelectSchema(passwordResetTokens as any as any);
+export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens);
+export const selectPasswordResetTokenSchema = createSelectSchema(passwordResetTokens);
 
-export const insertEmailVerificationTokenSchema = createInsertSchema(emailVerificationTokens as any as any);
-export const selectEmailVerificationTokenSchema = createSelectSchema(emailVerificationTokens as any as any);
+export const insertEmailVerificationTokenSchema = createInsertSchema(emailVerificationTokens);
+export const selectEmailVerificationTokenSchema = createSelectSchema(emailVerificationTokens);
 
-export const insertUserSessionSchema = createInsertSchema(userSessions as any as any);
-export const selectUserSessionSchema = createSelectSchema(userSessions as any as any);
+export const insertUserSessionSchema = createInsertSchema(userSessions);
+export const selectUserSessionSchema = createSelectSchema(userSessions);
 
 // Type exports
 export type User = typeof users.$inferSelect;
@@ -290,16 +290,16 @@ export const reviews = pgTable(
 );
 
 // Zod schemas for new tables
-export const insertCategorySchema = createInsertSchema(categories as any, {
+export const insertCategorySchema = createInsertSchema(categories, {
   name: z.string().min(1).max(255),
   slug: z.string().min(1).max(255),
   description: z.string().optional(),
   image: z.string().url().optional(),
 });
 
-export const selectCategorySchema = createSelectSchema(categories as any);
+export const selectCategorySchema = createSelectSchema(categories);
 
-export const insertProductSchema = createInsertSchema(products as any, {
+export const insertProductSchema = createInsertSchema(products, {
   name: z.string().min(1).max(255),
   description: z.string().min(1),
   price: z.number().int().positive(),
@@ -312,14 +312,14 @@ export const insertProductSchema = createInsertSchema(products as any, {
   stock_quantity: z.number().int().min(0).optional(),
 });
 
-export const selectProductSchema = createSelectSchema(products as any);
+export const selectProductSchema = createSelectSchema(products);
 
-export const insertReviewSchema = createInsertSchema(reviews as any, {
+export const insertReviewSchema = createInsertSchema(reviews, {
   rating: z.number().int().min(1).max(5),
   comment: z.string().optional(),
 });
 
-export const selectReviewSchema = createSelectSchema(reviews as any);
+export const selectReviewSchema = createSelectSchema(reviews);
 
 
 
@@ -455,15 +455,17 @@ export const bookmarks = pgTable(
 );
 
 // Additional schema definitions
-export const updateCategorySchema = createInsertSchema(categories as any, {
+export const updateCategorySchema = createInsertSchema(categories, {
   name: z.string().min(1).max(255).optional(),
   slug: z.string().min(1).max(255).optional(),
   description: z.string().optional(),
   image: z.string().url().optional(),
   is_active: z.boolean().optional(),
+  updated_at: z.date().optional(),
+  deleted_at: z.date().nullable().optional(),
 }).partial();
 
-export const updateProductSchema = createInsertSchema(products as any, {
+export const updateProductSchema = createInsertSchema(products, {
   name: z.string().min(1).max(255).optional(),
   description: z.string().min(1).optional(),
   price: z.number().int().positive().optional(),
@@ -480,22 +482,34 @@ export const updateProductSchema = createInsertSchema(products as any, {
   slug: z.string().optional(),
   meta_title: z.string().optional(),
   meta_description: z.string().optional(),
+  updated_at: z.date().optional(),
+  deleted_at: z.date().nullable().optional(),
 }).partial();
 
-export const updateUserSchema = createInsertSchema(users as any, {
+export const updateUserSchema = createInsertSchema(users, {
   name: z.string().min(2).max(255).optional(),
   email: z.string().email().optional(),
   role: z.enum(['USER', 'SELLER', 'ADMIN']).optional(),
   phone_number: z.string().optional(),
   profile_image_url: z.string().url().optional(),
   is_verified: z.boolean().optional(),
+  password_hash: z.string().optional(),
+  google_id: z.string().optional(),
+  oauth_provider: z.string().optional(),
+  oauth_access_token: z.string().optional(),
+  oauth_refresh_token: z.string().optional(),
+  oauth_token_expires_at: z.date().optional(),
+  updated_at: z.date().optional(),
+  deleted_at: z.date().nullable().optional(),
 }).partial();
 
-export const updateOrderSchema = createInsertSchema(orders as any, {
+export const updateOrderSchema = createInsertSchema(orders, {
   status: z.enum(['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']).optional(),
   payment_status: z.enum(['PENDING', 'PAID', 'FAILED', 'REFUNDED']).optional(),
   notes: z.string().optional(),
   tracking_number: z.string().optional(),
+  updated_at: z.date().optional(),
+  deleted_at: z.date().nullable().optional(),
 }).partial();
 
 // Type exports for new tables
@@ -516,7 +530,7 @@ export type NewBookmark = typeof bookmarks.$inferInsert;
 
 // All Zod schemas defined after table definitions to avoid circular references
 // Order schemas
-export const insertOrderSchema = createInsertSchema(orders as any, {
+export const insertOrderSchema = createInsertSchema(orders, {
   order_number: z.string().min(1).max(50),
   status: z.enum(['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']),
   total_amount: z.number().int().positive(),
@@ -541,10 +555,10 @@ export const insertOrderSchema = createInsertSchema(orders as any, {
   tracking_number: z.string().optional(),
 });
 
-export const selectOrderSchema = createSelectSchema(orders as any);
+export const selectOrderSchema = createSelectSchema(orders);
 
 // Order item schemas
-export const insertOrderItemSchema = createInsertSchema(orderItems as any, {
+export const insertOrderItemSchema = createInsertSchema(orderItems, {
   quantity: z.number().int().positive(),
   unit_price: z.number().int().positive(),
   total_price: z.number().int().positive(),
@@ -553,15 +567,15 @@ export const insertOrderItemSchema = createInsertSchema(orderItems as any, {
   product_weight: z.string().optional(),
 });
 
-export const selectOrderItemSchema = createSelectSchema(orderItems as any);
+export const selectOrderItemSchema = createSelectSchema(orderItems);
 
 // Cart item schemas
-export const insertCartItemSchema = createInsertSchema(cartItems as any, {
+export const insertCartItemSchema = createInsertSchema(cartItems, {
   quantity: z.number().int().positive(),
 });
 
-export const selectCartItemSchema = createSelectSchema(cartItems as any);
+export const selectCartItemSchema = createSelectSchema(cartItems);
 
 // Bookmark schemas
-export const insertBookmarkSchema = createInsertSchema(bookmarks as any);
-export const selectBookmarkSchema = createSelectSchema(bookmarks as any);
+export const insertBookmarkSchema = createInsertSchema(bookmarks);
+export const selectBookmarkSchema = createSelectSchema(bookmarks);

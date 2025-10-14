@@ -239,7 +239,7 @@ export class AdminUserService {
       is_verified: userData.is_verified ?? false,
       created_by: userData.created_by,
       password_hash,
-    }) as NewUser;
+    }) as any;
 
     const existingUser = await this.db
       .select({ id: users.id })
@@ -253,7 +253,7 @@ export class AdminUserService {
 
     const [newUser] = await this.db
       .insert(users)
-      .values(validatedData)
+      .values(validatedData as any)
       .returning({
         id: users.id,
         name: users.name,
@@ -299,7 +299,7 @@ export class AdminUserService {
       .set({
         ...validatedData,
         updated_at: new Date(),
-      })
+      } as any)
       .where(eq(users.id, id))
       .returning({
         id: users.id,
@@ -333,8 +333,9 @@ export class AdminUserService {
         deleted_at: new Date(),
         deleted_by,
         updated_at: new Date(),
-      })
-      .where(eq(users.id, id));
+      } as any)
+      .where(eq(users.id, id))
+      .returning({ id: users.id });
 
     const undo_token = `undo_user_${id}_${Date.now()}`;
     const undo_expires_at = new Date(Date.now() + 5000); // 5 seconds
@@ -363,8 +364,9 @@ export class AdminUserService {
         deleted_at: null,
         deleted_by: null,
         updated_at: new Date(),
-      })
-      .where(eq(users.id, id));
+      } as any)
+      .where(eq(users.id, id))
+      .returning({ id: users.id });
 
     const restoredUser = await this.getUserById(id);
     return restoredUser!;
@@ -396,11 +398,12 @@ export class AdminUserService {
       .set({
         ...validatedData,
         updated_at: new Date(),
-      })
+      } as any)
       .where(and(
         sql`${users.id} = ANY(${userIds})`,
         isNull(users.deleted_at)
-      ));
+      ))
+      .returning({ id: users.id });
 
     return {
       updated_count: userIds.length,
@@ -422,11 +425,12 @@ export class AdminUserService {
         deleted_at: new Date(),
         deleted_by,
         updated_at: new Date(),
-      })
+      } as any)
       .where(and(
         sql`${users.id} = ANY(${userIds})`,
         isNull(users.deleted_at)
-      ));
+      ))
+      .returning({ id: users.id });
 
     return {
       deleted_count: userIds.length,

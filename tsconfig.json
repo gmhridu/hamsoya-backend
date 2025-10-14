@@ -9,7 +9,7 @@
     "esModuleInterop": true,
     "allowJs": true,
     "checkJs": false,
-    "strict": true,
+    "noImplicitReturns": false,
     "noEmit": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,

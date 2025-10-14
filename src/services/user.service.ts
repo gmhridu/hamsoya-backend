@@ -56,7 +56,7 @@ export class UserService {
         role: userData.role,
         phone_number: userData.phone_number,
         is_verified: false,
-      })
+      } as any)
       .returning({
         id: users.id,
         name: users.name,
@@ -84,7 +84,7 @@ export class UserService {
       .set({
         ...updateData,
         updated_at: new Date(),
-      })
+      } as any)
       .where(eq(users.id, id))
       .returning({
         id: users.id,

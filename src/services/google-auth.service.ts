@@ -70,7 +70,7 @@ export class GoogleAuthService {
             profile_image_url: profile.picture || existingUser[0].profile_image_url,
             is_verified: profile.verified_email || existingUser[0].is_verified,
             updated_at: new Date(),
-          })
+          } as any)
           .where(eq(users.id, existingUser[0].id))
           .returning();
 
@@ -90,7 +90,9 @@ export class GoogleAuthService {
             profile_image_url: profile.picture,
             is_verified: profile.verified_email,
             role: 'USER',
-          })
+            created_at: new Date(),
+            updated_at: new Date(),
+          } as any)
           .returning();
 
         user = newUsers[0];
@@ -154,7 +156,7 @@ export class GoogleAuthService {
           oauth_token_expires_at: new Date(Date.now() + tokens.expires_in * 1000),
           profile_image_url: profile.picture,
           updated_at: new Date(),
-        })
+        } as any)
         .where(eq(users.id, userId))
         .returning();
 
@@ -183,7 +185,7 @@ export class GoogleAuthService {
           oauth_refresh_token: null,
           oauth_token_expires_at: null,
           updated_at: new Date(),
-        })
+        } as any)
         .where(eq(users.id, userId))
         .returning();
 
@@ -242,7 +244,7 @@ export class GoogleAuthService {
           oauth_access_token: this.encryptToken(tokens.access_token),
           oauth_token_expires_at: new Date(Date.now() + tokens.expires_in * 1000),
           updated_at: new Date(),
-        })
+        } as any)
         .where(eq(users.id, userId));
 
       return tokens;

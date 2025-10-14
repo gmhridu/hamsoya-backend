@@ -115,7 +115,7 @@ export const smartCache = async (c: Context, next: Next) => {
  * ETag middleware for conditional requests
  */
 export const etag = (generateETag: (c: Context) => string) => {
-  return async (c: Context, next: Next) => {
+  return async (c: Context, next: Next): Promise<any> => {
     const etagValue = generateETag(c);
     const ifNoneMatch = c.req.header('If-None-Match');
 
@@ -125,6 +125,5 @@ export const etag = (generateETag: (c: Context) => string) => {
 
     await next();
     c.header('ETag', etagValue);
-    return;
   };
 };
