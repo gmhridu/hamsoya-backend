@@ -30,14 +30,33 @@ export interface SecurityEvent {
 
 // Security audit logger
 export class SecurityAuditLogger {
-  private redis: Redis;
+  private redis: Redis | null = null;
 
   constructor(redisUrl?: string) {
-    this.redis = getRedis(redisUrl);
+    try {
+      this.redis = getRedis(redisUrl);
+    } catch (error) {
+      console.warn('Redis not available, security audit logging disabled');
+      this.redis = null;
+    }
   }
 
   // Log security event (never logs actual OTP values)
   async logEvent(event: SecurityEvent): Promise<void> {
+    if (!this.redis) {
+      // Console log as fallback when Redis is not available
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🔒 Security Event [${event.severity.toUpperCase()}] (Redis unavailable):`, {
+          type: event.type,
+          email: this.maskEmail(event.email),
+          ip: this.maskIP(event.ip),
+          timestamp: event.timestamp.toISOString(),
+          metadata: event.metadata,
+        });
+      }
+      return;
+    }
+
     try {
       // Create sanitized log entry
       const logEntry = {
@@ -252,6 +271,10 @@ export class SecurityAuditLogger {
     ip?: string,
     limit: number = 100
   ): Promise<SecurityEvent[]> {
+    if (!this.redis) {
+      return [];
+    }
+
     try {
       const pattern = type ? `security_log:${type}:*` : 'security_log:*';
       const keys = await this.redis.keys(pattern);
@@ -371,6 +394,10 @@ export class SecurityAuditLogger {
       severity: event.severity,
       timestamp: event.timestamp.toISOString(),
     });
+
+    if (!this.redis) {
+      return;
+    }
 
     // Store high-severity events in a separate key for immediate attention
     const alertKey = `security_alert:${event.type}:${Date.now()}`;
