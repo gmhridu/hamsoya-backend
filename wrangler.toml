@@ -57,9 +57,9 @@ zone_name = "hamsoya.com"
 pattern = "hamsoya.com/trpc/*"
 zone_name = "hamsoya.com"
 
-# Limits and performance
-[limits]
-cpu_ms = 50000
+# Limits and performance - commented out for Free plan
+# [limits]
+# cpu_ms = 50000
 
 # Analytics
 # [analytics_engine_datasets]
