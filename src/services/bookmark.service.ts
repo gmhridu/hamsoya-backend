@@ -42,7 +42,7 @@ export class BookmarkService {
    */
   async getBookmarks(userId?: string, sessionId?: string): Promise<BookmarkData> {
     const key = this.getBookmarkKey(userId, sessionId);
-    const bookmarkData = await this.redis.redis.get(key);
+    const bookmarkData = await (this.redis as any).redis.get(key);
 
     if (!bookmarkData) {
       return {
@@ -80,7 +80,7 @@ export class BookmarkService {
     };
 
     // Store with 30-day expiration (30 * 24 * 60 * 60 = 2592000 seconds)
-    await this.redis.redis.setex(key, 2592000, JSON.stringify(dataToStore));
+    await (this.redis as any).redis.setex(key, 2592000, JSON.stringify(dataToStore));
   }
 
   /**
@@ -88,14 +88,14 @@ export class BookmarkService {
    */
   async addBookmark(product: Product, userId?: string, sessionId?: string): Promise<BookmarkResponse> {
     const bookmarks = await this.getBookmarks(userId, sessionId);
-    
+
     // Check if already bookmarked
     const isAlreadyBookmarked = bookmarks.bookmarkedProducts.some(p => p.id === product.id);
-    
+
     if (!isAlreadyBookmarked) {
       bookmarks.bookmarkedProducts.push(product);
       bookmarks.bookmarkCount = bookmarks.bookmarkedProducts.length;
-      
+
       await this.saveBookmarks(bookmarks, userId, sessionId);
     }
 
@@ -110,7 +110,7 @@ export class BookmarkService {
    */
   async removeBookmark(productId: string, userId?: string, sessionId?: string): Promise<BookmarkResponse> {
     const bookmarks = await this.getBookmarks(userId, sessionId);
-    
+
     bookmarks.bookmarkedProducts = bookmarks.bookmarkedProducts.filter(p => p.id !== productId);
     bookmarks.bookmarkCount = bookmarks.bookmarkedProducts.length;
 
@@ -127,9 +127,9 @@ export class BookmarkService {
    */
   async toggleBookmark(product: Product, userId?: string, sessionId?: string): Promise<BookmarkResponse> {
     const bookmarks = await this.getBookmarks(userId, sessionId);
-    
+
     const existingIndex = bookmarks.bookmarkedProducts.findIndex(p => p.id === product.id);
-    
+
     if (existingIndex >= 0) {
       // Remove bookmark
       bookmarks.bookmarkedProducts.splice(existingIndex, 1);
@@ -190,7 +190,7 @@ export class BookmarkService {
 
     // Merge bookmarks - avoid duplicates
     const mergedProducts = [...userBookmarks.bookmarkedProducts];
-    
+
     for (const guestProduct of guestBookmarks.bookmarkedProducts) {
       const exists = mergedProducts.some(p => p.id === guestProduct.id);
       if (!exists) {

@@ -210,7 +210,7 @@ export class AdminProductService {
         desc(sql<number>`COALESCE(SUM(${orderItems.quantity}), 0)`);
     } else {
       const orderByColumn = products[sortBy as keyof typeof products] || products.created_at;
-      orderByClause = sortOrder === 'asc' ? asc(orderByColumn) : desc(orderByColumn);
+      orderByClause = sortOrder === 'asc' ? asc(orderByColumn as any) : desc(orderByColumn as any);
     }
 
     const [productsResult, totalResult] = await Promise.all([
@@ -349,7 +349,7 @@ export class AdminProductService {
   }
 
   async createProduct(productData: CreateAdminProductData): Promise<AdminProductWithStats> {
-    const validatedData = insertProductSchema.parse({
+    const validatedData: any = insertProductSchema.parse({
       name: productData.name,
       description: productData.description,
       price: productData.price,

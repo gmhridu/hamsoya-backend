@@ -205,7 +205,7 @@ export class AuthService {
     }
 
     // Verify password
-    const isValidPassword = await verifyPassword(password, user.password_hash);
+    const isValidPassword = await verifyPassword(password, user.password_hash || '');
     if (!isValidPassword) {
       throw new AppError('Invalid email or password', 401);
     }

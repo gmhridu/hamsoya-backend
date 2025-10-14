@@ -203,7 +203,7 @@ export const sendEmailWithHTML = async (options: SendEmailOptions, env?: any): P
         subject: options.subject,
         html,
         // Performance optimizations
-        priority: 'high', // High priority for immediate delivery
+        priority: 'high' as const, // High priority for immediate delivery
         encoding: 'utf8',
         // Additional optimizations for faster delivery
         disableFileAccess: true,

@@ -166,7 +166,7 @@ export class AdminOrderService {
     }
 
     const orderByColumn = orders[sortBy as keyof typeof orders] || orders.created_at;
-    const orderDirection = sortOrder === 'asc' ? asc : desc;
+    const orderDirection = sortOrder === 'asc' ? asc(orderByColumn as any) : desc(orderByColumn as any);
 
     const [ordersResult, totalResult] = await Promise.all([
       this.db
@@ -205,7 +205,7 @@ export class AdminOrderService {
         .leftJoin(orderItems, eq(orders.id, orderItems.order_id))
         .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
         .groupBy(orders.id, users.id)
-        .orderBy(orderDirection(orderByColumn))
+        .orderBy(orderDirection)
         .limit(limit)
         .offset(offset),
 
@@ -560,6 +560,10 @@ export class AdminOrderService {
         delivered_at: orders.delivered_at,
         created_at: orders.created_at,
         updated_at: orders.updated_at,
+        deleted_at: orders.deleted_at,
+        created_by: orders.created_by,
+        updated_by: orders.updated_by,
+        deleted_by: orders.deleted_by,
         customer: {
           id: users.id,
           name: users.name,
@@ -585,6 +589,6 @@ export class AdminOrderService {
       items: [],
       items_count: 0,
       days_since_created: Math.floor((Date.now() - order.created_at.getTime()) / (1000 * 60 * 60 * 24)),
-    })) as AdminOrderWithDetails[];
+    })) as unknown as AdminOrderWithDetails[];
   }
 }

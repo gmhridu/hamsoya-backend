@@ -84,11 +84,11 @@ export class ImageKitService {
   ): Promise<ImageKitUploadResponse> {
     try {
       const formData = new FormData();
-      
+
       if (file instanceof File) {
         formData.append('file', file);
       } else if (Buffer.isBuffer(file)) {
-        formData.append('file', new Blob([file]));
+        formData.append('file', new Blob([new Uint8Array(file)]));
       } else if (typeof file === 'string') {
         formData.append('file', file);
       } else {
@@ -153,9 +153,9 @@ export class ImageKitService {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = await response.json().catch(() => ({ message: null }));
         throw new AppError(
-          errorData.message || `ImageKit upload failed: ${response.statusText}`,
+          (errorData as any).message || `ImageKit upload failed: ${response.statusText}`,
           response.status
         );
       }
@@ -179,9 +179,9 @@ export class ImageKitService {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = await response.json().catch(() => ({ message: null }));
         throw new AppError(
-          errorData.message || `ImageKit delete failed: ${response.statusText}`,
+          (errorData as any).message || `ImageKit delete failed: ${response.statusText}`,
           response.status
         );
       }
@@ -210,17 +210,17 @@ export class ImageKitService {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = await response.json().catch(() => ({ message: null }));
         throw new AppError(
-          errorData.message || `ImageKit bulk delete failed: ${response.statusText}`,
+          (errorData as any).message || `ImageKit bulk delete failed: ${response.statusText}`,
           response.status
         );
       }
 
       const result = await response.json();
       return {
-        successfullyDeleted: result.successfullyDeleted || [],
-        errors: result.errors || [],
+        successfullyDeleted: (result as any).successfullyDeleted || [],
+        errors: (result as any).errors || [],
       };
     } catch (error) {
       if (error instanceof AppError) {
@@ -239,9 +239,9 @@ export class ImageKitService {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = await response.json().catch(() => ({ message: null }));
         throw new AppError(
-          errorData.message || `ImageKit get file details failed: ${response.statusText}`,
+          (errorData as any).message || `ImageKit get file details failed: ${response.statusText}`,
           response.status
         );
       }
@@ -286,9 +286,9 @@ export class ImageKitService {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = await response.json().catch(() => ({ message: null }));
         throw new AppError(
-          errorData.message || `ImageKit list files failed: ${response.statusText}`,
+          (errorData as any).message || `ImageKit list files failed: ${response.statusText}`,
           response.status
         );
       }
@@ -333,7 +333,7 @@ export class ImageKitService {
 
     try {
       const result = await this.bulkDeleteFiles(fileIds);
-      
+
       return {
         success: result.errors.length === 0,
         deletedFiles: result.successfullyDeleted,

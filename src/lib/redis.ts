@@ -14,9 +14,7 @@ export const getRedis = (redisUrl?: string): Redis => {
     const options: RedisOptions = {
       maxRetriesPerRequest: 3,
       lazyConnect: false, // Connect immediately
-      retryDelayOnFailover: 100,
       enableReadyCheck: true,
-      maxRetriesPerRequest: 3,
       connectTimeout: 10000,
       commandTimeout: 5000,
     };

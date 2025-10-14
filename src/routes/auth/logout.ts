@@ -9,6 +9,9 @@ type Env = {
     NODE_ENV?: string;
     [key: string]: any;
   };
+  Variables: {
+    user: any;
+  };
 };
 
 const app = new Hono<Env>();
@@ -16,7 +19,7 @@ const app = new Hono<Env>();
 // POST /api/auth/logout
 app.post('/', authMiddleware, async c => {
   try {
-    const user = c.get('user') as any;
+    const user = c.get('user');
     const refreshToken = getCookie(c, 'refreshToken');
 
     if (!user || !user.id) {

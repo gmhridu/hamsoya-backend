@@ -71,7 +71,7 @@ export async function getSessionStats(env: any) {
     // Get memory usage for sessions
     let totalMemory = 0;
     for (const key of sessionKeys.slice(0, 100)) { // Sample first 100 for performance
-      const memory = await redis.memory('usage', key);
+      const memory = await redis.memory('USAGE', key);
       totalMemory += memory || 0;
     }
 

@@ -3,7 +3,7 @@ import { zValidator } from '../../lib/zod-validator-fix';
 import { AuthService } from '../../services/auth.service';
 import { VerifyOTPSchema } from '../../types/auth';
 import { AppError } from '../../utils/error-handler';
-import { errorResponse, successResponse } from '../../utils/response-builder';
+import { errorResponse, successResponse, otpErrorResponse } from '../../utils/response-builder';
 
 const app = new Hono();
 
@@ -78,12 +78,7 @@ app.post('/', zValidator('json', VerifyOTPSchema), async c => {
       }
 
       return c.json(
-        errorResponse(userFriendlyMessage, {
-          errorCode,
-          remainingAttempts,
-          lockDuration,
-          userFriendly: true,
-        }),
+        otpErrorResponse(errorCode, userFriendlyMessage, statusCode, remainingAttempts, lockDuration),
         statusCode as any
       );
     }

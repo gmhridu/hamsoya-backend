@@ -43,7 +43,7 @@ export class CartService {
    */
   async getCart(userId?: string, sessionId?: string): Promise<CartData> {
     const key = this.getCartKey(userId, sessionId);
-    const cartData = await this.redis.redis.get(key);
+    const cartData = await (this.redis as any).redis.get(key);
 
     if (!cartData) {
       return {
@@ -84,7 +84,7 @@ export class CartService {
     };
 
     // Store with 30-day expiration (30 * 24 * 60 * 60 = 2592000 seconds)
-    await this.redis.redis.setex(key, 2592000, JSON.stringify(dataToStore));
+    await (this.redis as any).redis.setex(key, 2592000, JSON.stringify(dataToStore));
   }
 
   /**
@@ -92,9 +92,9 @@ export class CartService {
    */
   async addItem(product: Product, quantity: number = 1, userId?: string, sessionId?: string): Promise<CartResponse> {
     const cart = await this.getCart(userId, sessionId);
-    
+
     const existingItemIndex = cart.items.findIndex(item => item.product.id === product.id);
-    
+
     if (existingItemIndex >= 0) {
       // Update existing item quantity
       cart.items[existingItemIndex].quantity += quantity;
@@ -120,7 +120,7 @@ export class CartService {
    */
   async removeItem(productId: string, userId?: string, sessionId?: string): Promise<CartResponse> {
     const cart = await this.getCart(userId, sessionId);
-    
+
     cart.items = cart.items.filter(item => item.product.id !== productId);
 
     // Recalculate totals
@@ -144,9 +144,9 @@ export class CartService {
     }
 
     const cart = await this.getCart(userId, sessionId);
-    
+
     const existingItemIndex = cart.items.findIndex(item => item.product.id === productId);
-    
+
     if (existingItemIndex >= 0) {
       cart.items[existingItemIndex].quantity = quantity;
     }
@@ -199,10 +199,10 @@ export class CartService {
 
     // Merge carts - user cart takes precedence for duplicate items
     const mergedItems = [...userCart.items];
-    
+
     for (const guestItem of guestCart.items) {
       const existingIndex = mergedItems.findIndex(item => item.product.id === guestItem.product.id);
-      
+
       if (existingIndex >= 0) {
         // Add quantities for existing items
         mergedItems[existingIndex].quantity += guestItem.quantity;

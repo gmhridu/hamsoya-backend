@@ -26,14 +26,14 @@ export interface OrderFilters {
   offset?: number;
 }
 
-export interface OrderWithDetails extends Order {
+export interface OrderWithDetails extends Omit<Order, 'created_by' | 'updated_by' | 'deleted_at' | 'deleted_by' | 'payment_id'> {
   customer: {
     id: string;
     name: string;
     email: string;
     phone_number?: string;
   };
-  items: (OrderItem & {
+  items: (Omit<OrderItem, 'updated_at' | 'product_name' | 'product_image' | 'product_weight'> & {
     product: {
       id: string;
       name: string;
@@ -268,8 +268,8 @@ export class OrderService {
         created_at: item.created_at,
         product: {
           id: item.product_id,
-          name: item.product_name || item.product_snapshot.name,
-          images: item.product_images || item.product_snapshot.images,
+          name: item.product_name || (item.product_snapshot as any)?.name,
+          images: item.product_images || (item.product_snapshot as any)?.images,
         },
       });
       return acc;
@@ -394,9 +394,13 @@ export class OrderService {
       created_at: item.created_at,
       product: {
         id: item.product_id,
-        name: item.product_name || item.product_snapshot.name,
-        images: item.product_images || item.product_snapshot.images,
+        name: item.product_name || (item.product_snapshot as any)?.name,
+        images: item.product_images || (item.product_snapshot as any)?.images,
       },
+      updated_at: new Date(),
+      product_name: '',
+      product_image: null,
+      product_weight: null,
     }));
 
     return {

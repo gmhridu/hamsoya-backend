@@ -138,7 +138,7 @@ export class AdminUserService {
     }
 
     const orderByColumn = users[sortBy as keyof typeof users] || users.created_at;
-    const orderDirection = sortOrder === 'asc' ? asc : desc;
+    const orderByClause = sortOrder === 'asc' ? asc(orderByColumn as any) : desc(orderByColumn as any);
 
     const [usersResult, totalResult] = await Promise.all([
       this.db
@@ -162,7 +162,7 @@ export class AdminUserService {
         .leftJoin(orders, and(eq(users.id, orders.user_id), isNull(orders.deleted_at)))
         .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
         .groupBy(users.id)
-        .orderBy(orderDirection(orderByColumn))
+        .orderBy(orderByClause)
         .limit(limit)
         .offset(offset),
 
@@ -225,6 +225,11 @@ export class AdminUserService {
   }
 
   async createUser(userData: CreateAdminUserData): Promise<AdminUserWithStats> {
+    let password_hash: string | undefined;
+    if (userData.password) {
+      password_hash = await hashPassword(userData.password);
+    }
+
     const validatedData = insertUserSchema.parse({
       name: userData.name,
       email: userData.email,
@@ -233,7 +238,8 @@ export class AdminUserService {
       profile_image_url: userData.profile_image_url,
       is_verified: userData.is_verified ?? false,
       created_by: userData.created_by,
-    });
+      password_hash,
+    }) as NewUser;
 
     const existingUser = await this.db
       .select({ id: users.id })
@@ -245,17 +251,9 @@ export class AdminUserService {
       throw new AppError('User with this email already exists', 409);
     }
 
-    let password_hash: string | undefined;
-    if (userData.password) {
-      password_hash = await hashPassword(userData.password);
-    }
-
     const [newUser] = await this.db
       .insert(users)
-      .values({
-        ...validatedData,
-        password_hash,
-      })
+      .values(validatedData)
       .returning({
         id: users.id,
         name: users.name,

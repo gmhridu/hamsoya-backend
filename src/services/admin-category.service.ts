@@ -132,7 +132,7 @@ export class AdminCategoryService {
         desc(sql<number>`COALESCE(COUNT(${products.id}), 0)`);
     } else {
       const orderByColumn = categories[sortBy as keyof typeof categories] || categories.created_at;
-      orderByClause = sortOrder === 'asc' ? asc(orderByColumn) : desc(orderByColumn);
+      orderByClause = sortOrder === 'asc' ? asc(orderByColumn as any) : desc(orderByColumn as any);
     }
 
     const [categoriesResult, totalResult] = await Promise.all([
@@ -218,7 +218,7 @@ export class AdminCategoryService {
   }
 
   async createCategory(categoryData: CreateAdminCategoryData): Promise<AdminCategoryWithStats> {
-    const validatedData = insertCategorySchema.parse({
+    const validatedData: any = insertCategorySchema.parse({
       name: categoryData.name,
       description: categoryData.description,
       image: categoryData.image,

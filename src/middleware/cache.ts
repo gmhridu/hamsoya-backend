@@ -31,7 +31,7 @@ const CACHE_CONFIGS = {
  */
 export const noCache = async (c: Context, next: Next) => {
   await next();
-  
+
   Object.entries(CACHE_CONFIGS.noCache).forEach(([key, value]) => {
     c.header(key, value);
   });
@@ -42,7 +42,7 @@ export const noCache = async (c: Context, next: Next) => {
  */
 export const shortCache = async (c: Context, next: Next) => {
   await next();
-  
+
   Object.entries(CACHE_CONFIGS.shortCache).forEach(([key, value]) => {
     c.header(key, value);
   });
@@ -53,7 +53,7 @@ export const shortCache = async (c: Context, next: Next) => {
  */
 export const mediumCache = async (c: Context, next: Next) => {
   await next();
-  
+
   Object.entries(CACHE_CONFIGS.mediumCache).forEach(([key, value]) => {
     c.header(key, value);
   });
@@ -64,7 +64,7 @@ export const mediumCache = async (c: Context, next: Next) => {
  */
 export const longCache = async (c: Context, next: Next) => {
   await next();
-  
+
   Object.entries(CACHE_CONFIGS.longCache).forEach(([key, value]) => {
     c.header(key, value);
   });
@@ -75,9 +75,9 @@ export const longCache = async (c: Context, next: Next) => {
  */
 export const smartCache = async (c: Context, next: Next) => {
   await next();
-  
+
   const path = c.req.path;
-  
+
   // No cache for authentication endpoints
   if (path.includes('/auth/') && (
     path.includes('/login') ||
@@ -91,7 +91,7 @@ export const smartCache = async (c: Context, next: Next) => {
     });
     return;
   }
-  
+
   // Short cache for user profile endpoints
   if (path.includes('/auth/me') || path.includes('/user/profile')) {
     Object.entries(CACHE_CONFIGS.shortCache).forEach(([key, value]) => {
@@ -99,7 +99,7 @@ export const smartCache = async (c: Context, next: Next) => {
     });
     return;
   }
-  
+
   // Medium cache for categories and other semi-static data
   if (path.includes('/categories') || path.includes('/health')) {
     Object.entries(CACHE_CONFIGS.mediumCache).forEach(([key, value]) => {
@@ -107,7 +107,7 @@ export const smartCache = async (c: Context, next: Next) => {
     });
     return;
   }
-  
+
   // Default: no specific cache headers (let browser decide)
 };
 
@@ -116,14 +116,15 @@ export const smartCache = async (c: Context, next: Next) => {
  */
 export const etag = (generateETag: (c: Context) => string) => {
   return async (c: Context, next: Next) => {
-    const etag = generateETag(c);
+    const etagValue = generateETag(c);
     const ifNoneMatch = c.req.header('If-None-Match');
-    
-    if (ifNoneMatch === etag) {
+
+    if (ifNoneMatch === etagValue) {
       return c.body(null, 304);
     }
-    
+
     await next();
-    c.header('ETag', etag);
+    c.header('ETag', etagValue);
+    return;
   };
 };
