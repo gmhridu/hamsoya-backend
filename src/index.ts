@@ -35,6 +35,7 @@ app.use(
       // Allow same domain and localhost for development
       const allowedOrigins = [
         'https://hamsoya.com',
+        'https://hamsoya.vercel.app',
         'http://localhost:3000',
         'http://127.0.0.1:3000',
       ];

@@ -19,8 +19,9 @@ BACKEND_URL = "http://localhost:8787"
 name = "hamsoya-backend-prod"
 [env.production.vars]
 NODE_ENV = "production"
-FRONTEND_URL = "https://hamsoya.com"
-BACKEND_URL = "https://hamsoya.com"
+FRONTEND_URL = "https://hamsoya.vercel.app"
+BACKEND_URL = "https://hamsoya-backend-prod.ahmedriazbepari.workers.dev"
+REDIS_URL = "rediss://default:AX2EAAIjcDFhODQxOWZmYTMzMDg0ZDkxOTMyNTNiMDQ5MDk2OTJhM3AxMA@civil-tetra-32132.upstash.io:6379"
 
 # Default environment variables (use wrangler secret put for sensitive values)
 [vars]
@@ -50,13 +51,14 @@ REDIS_URL = "rediss://default:AX2EAAIjcDFhODQxOWZmYTMzMDg0ZDkxOTMyNTNiMDQ5MDk2OT
 command = "bun run build"
 
 # Routes for production deployment
-[[routes]]
-pattern = "hamsoya.com/api/*"
-zone_name = "hamsoya.com"
+# Comment out routes if domain is not yet configured in Cloudflare
+# [[routes]]
+# pattern = "hamsoya.com/api/*"
+# zone_name = "hamsoya.com"
 
-[[routes]]
-pattern = "hamsoya.com/trpc/*"
-zone_name = "hamsoya.com"
+# [[routes]]
+# pattern = "hamsoya.com/trpc/*"
+# zone_name = "hamsoya.com"
 
 # Limits and performance - commented out for Free plan
 # [limits]
@@ -74,5 +76,4 @@ head_sampling_rate = 1
 [observability.logs]
 enabled = true
 head_sampling_rate = 1
-persist = true
 invocation_logs = true
