@@ -1,3 +1,4 @@
+import { serve } from '@hono/node-server';
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
@@ -83,4 +84,7 @@ app.notFound(c => {
   return c.json({ error: 'Not Found', path: c.req.path }, 404);
 });
 
+// Export the Hono app without starting the server
+// This allows for Cloudflare Workers deployment while still supporting Node.js server
+// The server is started in src/server.ts for local development
 export default app;

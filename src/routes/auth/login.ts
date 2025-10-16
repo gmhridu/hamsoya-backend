@@ -84,7 +84,7 @@ app.post('/', zValidator('json', LoginSchema), async c => {
       const frontendUrl = c.env?.FRONTEND_URL || 'http://localhost:3000';
       const fullRedirectUrl = `${frontendUrl}${redirectUrl}`;
 
-      console.log(`[LOGIN-API] Server-side redirect: ${result.user.role} -> ${redirectUrl}`);
+      console.log(`[LOGIN-API] Server-side redirect: ${result.user.role} -> ${fullRedirectUrl}`);
 
       return c.redirect(fullRedirectUrl, 302);
     }

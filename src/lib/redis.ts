@@ -1,47 +1,66 @@
-import Redis, { type RedisOptions } from 'ioredis';
+import Redis, { type RedisOptions } from "ioredis";
 
 // Redis connection singleton
 let redis: Redis | null = null;
+let redisInitialized = false;
 
 export const getRedis = (redisUrl?: string): Redis | null => {
-  if (!redis) {
-    const url = redisUrl || process.env.REDIS_URL;
+  // Return cached instance (could be null if initialization failed)
+  if (redisInitialized) {
+    return redis;
+  }
 
-    if (!url) {
-      console.warn('⚠️ Redis URL not provided, Redis functionality disabled');
-      return null;
-    }
+  const url = redisUrl || process.env.REDIS_URL!;
 
-    try {
-      const options: RedisOptions = {
-        maxRetriesPerRequest: 3,
-        lazyConnect: false, // Connect immediately
-        enableReadyCheck: true,
-        connectTimeout: 10000,
-        commandTimeout: 5000,
-      };
+  if (!url) {
+    console.warn(
+      "⚠️  Redis URL not provided, Redis functionality disabled (OTP rate limiting, sessions will use fallback methods)"
+    );
+    redisInitialized = true;
+    return null;
+  }
 
-      redis = new Redis(url, options);
+  try {
+    const options: RedisOptions = {
+      maxRetriesPerRequest: 1,
+      lazyConnect: true, // Don't block startup if Redis is unavailable
+      enableReadyCheck: false,
+      connectTimeout: 3000,
+      commandTimeout: 3000,
+      retryStrategy: (times) => {
+        // Stop retrying immediately
+        if (times > 1) {
+          return null;
+        }
+        return null;
+      },
+      reconnectOnError: () => false, // Don't reconnect on errors
+    };
 
-      redis.on('error', err => {
-        console.error('❌ Redis connection error:', err);
-      });
+    redis = new Redis(url, options);
 
-      redis.on('connect', () => {
-        console.log('✅ Redis connected successfully');
-      });
+    redis.on("error", (err: any) => {
+      // Silently handle errors - Redis is optional
+      if (err.code === "ENOTFOUND" || err.code === "ECONNREFUSED") {
+        // DNS or connection errors - Redis is unavailable
+        redis = null;
+      }
+    });
 
-      redis.on('ready', () => {
-        console.log('✅ Redis ready for commands');
-      });
+    redis.on("connect", () => {
+      console.log("✅ Redis connected successfully");
+    });
 
-      redis.on('reconnecting', () => {
-        console.log('🔄 Redis reconnecting...');
-      });
-    } catch (error) {
-      console.warn('⚠️ Failed to initialize Redis, functionality disabled:', error);
-      return null;
-    }
+    redis.on("ready", () => {
+      console.log("✅ Redis ready for commands");
+    });
+
+    // Mark as initialized
+    redisInitialized = true;
+  } catch (error) {
+    console.warn("⚠️  Failed to initialize Redis, functionality disabled");
+    redis = null;
+    redisInitialized = true;
   }
 
   return redis;
@@ -149,37 +168,54 @@ export class RedisService {
   }
 
   // Cooldown Management - disabled if no Redis
-  async setCooldown(email: string, type: 'otp' | 'password_reset' = 'otp'): Promise<void> {
+  async setCooldown(
+    email: string,
+    type: "otp" | "password_reset" = "otp"
+  ): Promise<void> {
     if (!this.redis) return;
     const key =
-      type === 'otp' ? RedisKeys.otpCooldown(email) : RedisKeys.passwordResetCooldown(email);
-    await this.redis.setex(key, OTP_LIMITS.COOLDOWN_SECONDS, '1');
+      type === "otp"
+        ? RedisKeys.otpCooldown(email)
+        : RedisKeys.passwordResetCooldown(email);
+    await this.redis.setex(key, OTP_LIMITS.COOLDOWN_SECONDS, "1");
   }
 
-  async checkCooldown(email: string, type: 'otp' | 'password_reset' = 'otp'): Promise<boolean> {
+  async checkCooldown(
+    email: string,
+    type: "otp" | "password_reset" = "otp"
+  ): Promise<boolean> {
     if (!this.redis) return false;
     const key =
-      type === 'otp' ? RedisKeys.otpCooldown(email) : RedisKeys.passwordResetCooldown(email);
+      type === "otp"
+        ? RedisKeys.otpCooldown(email)
+        : RedisKeys.passwordResetCooldown(email);
     const exists = await this.redis.exists(key);
     return exists === 1;
   }
 
   async getCooldownRemaining(
     email: string,
-    type: 'otp' | 'password_reset' = 'otp'
+    type: "otp" | "password_reset" = "otp"
   ): Promise<number> {
     if (!this.redis) return 0;
     const key =
-      type === 'otp' ? RedisKeys.otpCooldown(email) : RedisKeys.passwordResetCooldown(email);
+      type === "otp"
+        ? RedisKeys.otpCooldown(email)
+        : RedisKeys.passwordResetCooldown(email);
     const ttl = await this.redis.ttl(key);
     return ttl > 0 ? ttl : 0;
   }
 
   // Attempt tracking - disabled if no Redis
-  async incrementAttempts(email: string, type: 'otp' | 'password_reset' = 'otp'): Promise<number> {
+  async incrementAttempts(
+    email: string,
+    type: "otp" | "password_reset" = "otp"
+  ): Promise<number> {
     if (!this.redis) return 0;
     const key =
-      type === 'otp' ? RedisKeys.otpAttempts(email) : RedisKeys.passwordResetAttempts(email);
+      type === "otp"
+        ? RedisKeys.otpAttempts(email)
+        : RedisKeys.passwordResetAttempts(email);
     const attempts = await this.redis.incr(key);
 
     if (attempts === 1) {
@@ -190,18 +226,28 @@ export class RedisService {
     return attempts;
   }
 
-  async getAttempts(email: string, type: 'otp' | 'password_reset' = 'otp'): Promise<number> {
+  async getAttempts(
+    email: string,
+    type: "otp" | "password_reset" = "otp"
+  ): Promise<number> {
     if (!this.redis) return 0;
     const key =
-      type === 'otp' ? RedisKeys.otpAttempts(email) : RedisKeys.passwordResetAttempts(email);
+      type === "otp"
+        ? RedisKeys.otpAttempts(email)
+        : RedisKeys.passwordResetAttempts(email);
     const attempts = await this.redis.get(key);
     return attempts ? parseInt(attempts, 10) : 0;
   }
 
-  async resetAttempts(email: string, type: 'otp' | 'password_reset' = 'otp'): Promise<void> {
+  async resetAttempts(
+    email: string,
+    type: "otp" | "password_reset" = "otp"
+  ): Promise<void> {
     if (!this.redis) return;
     const key =
-      type === 'otp' ? RedisKeys.otpAttempts(email) : RedisKeys.passwordResetAttempts(email);
+      type === "otp"
+        ? RedisKeys.otpAttempts(email)
+        : RedisKeys.passwordResetAttempts(email);
     await this.redis.del(key);
   }
 
@@ -209,23 +255,38 @@ export class RedisService {
   async setLock(
     email: string,
     minutes: number,
-    type: 'otp' | 'password_reset' = 'otp'
+    type: "otp" | "password_reset" = "otp"
   ): Promise<void> {
     if (!this.redis) return;
-    const key = type === 'otp' ? RedisKeys.otpLock(email) : RedisKeys.passwordResetLock(email);
-    await this.redis.setex(key, minutes * 60, '1');
+    const key =
+      type === "otp"
+        ? RedisKeys.otpLock(email)
+        : RedisKeys.passwordResetLock(email);
+    await this.redis.setex(key, minutes * 60, "1");
   }
 
-  async checkLock(email: string, type: 'otp' | 'password_reset' = 'otp'): Promise<boolean> {
+  async checkLock(
+    email: string,
+    type: "otp" | "password_reset" = "otp"
+  ): Promise<boolean> {
     if (!this.redis) return false;
-    const key = type === 'otp' ? RedisKeys.otpLock(email) : RedisKeys.passwordResetLock(email);
+    const key =
+      type === "otp"
+        ? RedisKeys.otpLock(email)
+        : RedisKeys.passwordResetLock(email);
     const exists = await this.redis.exists(key);
     return exists === 1;
   }
 
-  async removeLock(email: string, type: 'otp' | 'password_reset' = 'otp'): Promise<void> {
+  async removeLock(
+    email: string,
+    type: "otp" | "password_reset" = "otp"
+  ): Promise<void> {
     if (!this.redis) return;
-    const key = type === 'otp' ? RedisKeys.otpLock(email) : RedisKeys.passwordResetLock(email);
+    const key =
+      type === "otp"
+        ? RedisKeys.otpLock(email)
+        : RedisKeys.passwordResetLock(email);
     await this.redis.del(key);
   }
 
@@ -233,7 +294,7 @@ export class RedisService {
   async setPasswordResetVerified(email: string): Promise<void> {
     if (!this.redis) return;
     const key = RedisKeys.passwordResetVerified(email);
-    await this.redis.setex(key, 600, '1'); // 10 minutes to complete password reset
+    await this.redis.setex(key, 600, "1"); // 10 minutes to complete password reset
   }
 
   async checkPasswordResetVerified(email: string): Promise<boolean> {
@@ -250,7 +311,11 @@ export class RedisService {
   }
 
   // Session Management - disabled if no Redis
-  async setRefreshToken(tokenHash: string, userId: string, expirySeconds: number): Promise<void> {
+  async setRefreshToken(
+    tokenHash: string,
+    userId: string,
+    expirySeconds: number
+  ): Promise<void> {
     if (!this.redis) return;
     const key = RedisKeys.refreshToken(tokenHash);
     await this.redis.setex(key, expirySeconds, userId);
@@ -355,7 +420,7 @@ export class RedisService {
   async setIPLock(ip: string): Promise<void> {
     if (!this.redis) return;
     const key = RedisKeys.otpIpLimit(ip);
-    await this.redis.setex(key, OTP_LIMITS.IP_LOCK_MINUTES * 60, '1');
+    await this.redis.setex(key, OTP_LIMITS.IP_LOCK_MINUTES * 60, "1");
   }
 
   async checkIPLock(ip: string): Promise<boolean> {
@@ -366,10 +431,13 @@ export class RedisService {
   }
 
   // Cleanup utility - disabled if no Redis
-  async cleanup(email: string, type: 'otp' | 'password_reset' = 'otp'): Promise<void> {
+  async cleanup(
+    email: string,
+    type: "otp" | "password_reset" = "otp"
+  ): Promise<void> {
     if (!this.redis) return;
     const keys =
-      type === 'otp'
+      type === "otp"
         ? [
             RedisKeys.otp(email),
             RedisKeys.otpCooldown(email),

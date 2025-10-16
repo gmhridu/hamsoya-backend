@@ -23,7 +23,7 @@ const envSchema = z.object({
   SMTP_PASSWORD: z.string().min(1, 'SMTP password is required'),
 
   // Application URLs
-  FRONTEND_URL: z.string().url('Invalid frontend URL').default('http://localhost:3000'),
+  FRONTEND_URL: z.string().url('Invalid frontend URL').default('http://localhost:5000'),
   BACKEND_URL: z.string().url('Invalid backend URL').default('http://localhost:8787'),
 
   // Google OAuth Configuration

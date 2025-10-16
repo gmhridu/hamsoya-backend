@@ -1,17 +1,10 @@
-import { and, desc, eq, ilike, sql, count, gte, lte, asc } from 'drizzle-orm';
-import {
-  getDb,
-  orders,
-  orderItems,
-  products,
-  users,
-  type Order,
-  type OrderItem,
-  type NewOrder,
-  type NewOrderItem,
-  type Product,
-} from '../db';
+import { and, desc, eq, ilike, sql, count, gte, lte, asc, InferSelectModel } from 'drizzle-orm';
 import { AppError } from '../utils/error-handler';
+import { getDb } from '../db/db';
+import { orderItems, orders, products, users } from '../db/schema';
+
+export type Order = InferSelectModel<typeof orders>;
+export type OrderItem = InferSelectModel<typeof orderItems>;
 
 export interface OrderFilters {
   search?: string;

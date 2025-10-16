@@ -1,14 +1,26 @@
 import { and, count, desc, eq, ilike, isNull, or, sql, asc, gte, lte, inArray } from 'drizzle-orm';
-import {
-  getDb,
-  categories,
-  products,
-  type Category,
-  type NewCategory,
-  insertCategorySchema,
-  updateCategorySchema,
-} from '../db';
+import type { InferSelectModel } from 'drizzle-orm';
+import { z } from 'zod';
 import { AppError } from '../utils/error-handler';
+import { getDb } from '../db/db';
+import { categories, products } from '../db/schema';
+
+// Type definitions
+export type Category = InferSelectModel<typeof categories>;
+
+// Zod schemas
+const insertCategorySchema = z.object({
+  name: z.string().min(1).max(255),
+  description: z.string().optional(),
+  image: z.string().optional(),
+  slug: z.string().min(1),
+  is_active: z.boolean().optional().default(true),
+  created_by: z.string(),
+});
+
+const updateCategorySchema = insertCategorySchema.partial().omit({ created_by: true }).extend({
+  updated_by: z.string().uuid(),
+});
 
 export interface AdminCategoryFilters {
   search?: string;
@@ -34,7 +46,7 @@ export interface AdminCategoryResponse {
   };
 }
 
-export interface AdminCategoryWithStats extends Category {
+export interface AdminCategoryWithStats extends Omit<Category, 'created_by' | 'updated_by' | 'deleted_by'> {
   product_count?: number;
   active_product_count?: number;
   featured_product_count?: number;
@@ -218,7 +230,7 @@ export class AdminCategoryService {
   }
 
   async createCategory(categoryData: CreateAdminCategoryData): Promise<AdminCategoryWithStats> {
-    const validatedData: any = insertCategorySchema.parse({
+    const validatedData = insertCategorySchema.parse({
       name: categoryData.name,
       description: categoryData.description,
       image: categoryData.image,
@@ -261,7 +273,10 @@ export class AdminCategoryService {
       throw new AppError('Category not found', 404);
     }
 
-    const validatedData = updateCategorySchema.parse(updateData);
+    const validatedData = updateCategorySchema.safeParse(updateData);
+    if (!validatedData.success) {
+      throw new AppError(validatedData.error.issues.map(e => e.message).join(', '), 400);
+    }
 
     if (updateData.slug && updateData.slug !== existingCategory.slug) {
       const slugExists = await this.db
@@ -275,12 +290,12 @@ export class AdminCategoryService {
       }
     }
 
-    await this.db
+    const [updated] = await this.db
       .update(categories)
       .set({
-        ...validatedData,
+        ...validatedData.data,
         updated_at: new Date(),
-      } as any)
+      })
       .where(eq(categories.id, id))
       .returning({ id: categories.id });
 
@@ -380,14 +395,17 @@ export class AdminCategoryService {
       throw new AppError('No category IDs provided', 400);
     }
 
-    const validatedData = updateCategorySchema.parse(updateData);
+    const validatedData = updateCategorySchema.safeParse(updateData);
+    if (!validatedData.success) {
+      throw new AppError(validatedData.error.issues.map(e => e.message).join(', '), 400);
+    }
 
     await this.db
       .update(categories)
       .set({
-        ...validatedData,
+        ...validatedData.data,
         updated_at: new Date(),
-      } as any)
+      })
       .where(and(
         inArray(categories.id, categoryIds),
         isNull(categories.deleted_at)

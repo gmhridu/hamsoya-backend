@@ -1,15 +1,29 @@
 import { and, count, desc, eq, ilike, isNull, or, sql, asc, gte, lte } from 'drizzle-orm';
-import {
-  getDb,
-  users,
-  orders,
-  type User,
-  type NewUser,
-  insertUserSchema,
-  updateUserSchema,
-} from '../db';
+import type { InferSelectModel } from 'drizzle-orm';
+import { z } from 'zod';
 import { AppError } from '../utils/error-handler';
 import { hashPassword } from '../lib/crypto';
+import { getDb } from '../db/db';
+import { orders, users } from '../db/schema';
+
+// Type definitions
+export type User = InferSelectModel<typeof users>;
+
+// Zod schemas
+const insertUserSchema = z.object({
+  name: z.string().min(2).max(255),
+  email: z.email(),
+  password_hash: z.string().optional(),
+  role: z.enum(['USER', 'SELLER', 'ADMIN']),
+  phone_number: z.string().optional(),
+  profile_image_url: z.string().url().optional(),
+  is_verified: z.boolean().optional().default(false),
+  created_by: z.string(),
+});
+
+const updateUserSchema = insertUserSchema.partial().omit({ created_by: true }).extend({
+  updated_by: z.string(),
+});
 
 export interface AdminUserFilters {
   search?: string;
@@ -36,7 +50,7 @@ export interface AdminUserResponse {
   };
 }
 
-export interface AdminUserWithStats extends Omit<User, 'password_hash'> {
+export interface AdminUserWithStats extends Omit<User, 'password_hash' | 'created_by' | 'updated_by' | 'deleted_by' | 'google_id' | 'oauth_provider' | 'oauth_access_token' | 'oauth_refresh_token' | 'oauth_token_expires_at'> {
   total_orders?: number;
   total_spent?: number;
   last_order_date?: Date;
@@ -239,7 +253,7 @@ export class AdminUserService {
       is_verified: userData.is_verified ?? false,
       created_by: userData.created_by,
       password_hash,
-    }) as any;
+    });
 
     const existingUser = await this.db
       .select({ id: users.id })
@@ -253,7 +267,7 @@ export class AdminUserService {
 
     const [newUser] = await this.db
       .insert(users)
-      .values(validatedData as any)
+      .values(validatedData)
       .returning({
         id: users.id,
         name: users.name,
@@ -280,7 +294,10 @@ export class AdminUserService {
       throw new AppError('User not found', 404);
     }
 
-    const validatedData = updateUserSchema.parse(updateData);
+    const validatedData = updateUserSchema.safeParse(updateData);
+    if (!validatedData.success) {
+      throw new AppError(validatedData.error.issues.map(e => e.message).join(', '), 400);
+    }
 
     if (updateData.email && updateData.email !== existingUser.email) {
       const emailExists = await this.db
@@ -297,9 +314,9 @@ export class AdminUserService {
     const [updatedUser] = await this.db
       .update(users)
       .set({
-        ...validatedData,
+        ...validatedData.data,
         updated_at: new Date(),
-      } as any)
+      })
       .where(eq(users.id, id))
       .returning({
         id: users.id,
@@ -391,14 +408,17 @@ export class AdminUserService {
       throw new AppError('No user IDs provided', 400);
     }
 
-    const validatedData = updateUserSchema.parse(updateData);
+    const validatedData = updateUserSchema.safeParse(updateData);
+    if (!validatedData.success) {
+      throw new AppError(validatedData.error.issues.map(e => e.message).join(', '), 400);
+    }
 
     const result = await this.db
       .update(users)
       .set({
-        ...validatedData,
+        ...validatedData.data,
         updated_at: new Date(),
-      } as any)
+      })
       .where(and(
         sql`${users.id} = ANY(${userIds})`,
         isNull(users.deleted_at)

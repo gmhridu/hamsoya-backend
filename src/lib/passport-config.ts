@@ -104,7 +104,7 @@ export function ensureAuthenticated(req: any, res: any, next: any) {
   }
 
   // For web requests, redirect to login
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5000';
   res.redirect(`${frontendUrl}/login`);
 }
 

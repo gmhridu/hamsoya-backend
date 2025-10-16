@@ -1,8 +1,11 @@
-import { eq, or } from 'drizzle-orm';
-import type { User } from '../db';
-import { getDb, users } from '../db';
+import { eq } from 'drizzle-orm';
 import { generateAccessToken, generateRefreshToken } from '../lib/jwt';
 import { AppError } from '../utils/error-handler';
+import { getDb } from '../db/db';
+import { users } from '../db/schema';
+import { User } from './auth.service';
+
+
 
 export interface GoogleUserProfile {
   id: string;

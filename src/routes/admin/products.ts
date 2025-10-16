@@ -6,9 +6,10 @@ import { AdminProductService } from '../../services/admin-product.service';
 import { authMiddleware, adminMiddleware } from '../../middleware/auth';
 import { AppError } from '../../utils/error-handler';
 import type { HonoEnv } from '../../types/hono';
-import { getDb } from '../../db';
-import { products } from '../../db/schema';
 import { eq } from 'drizzle-orm';
+import { db } from '../../db/db';
+import { products } from '../../db/schema';
+
 
 const app = new Hono<HonoEnv>();
 
@@ -194,7 +195,7 @@ app.get('/:id', async c => {
     const include_deleted = c.req.query('include_deleted') === 'true';
 
     const adminProductService = new AdminProductService(c.env);
-    const product = await adminProductService.getProductById(id, include_deleted);
+    const product = await adminProductService.getProductById(id);
 
     if (!product) {
       return c.json(errorResponse('Product not found'), 404 as any);
@@ -237,7 +238,6 @@ app.put('/:id/featured', zValidator('json', FeaturedToggleSchema), async c => {
   try {
     const id = c.req.param('id');
     const { featured } = c.req.valid('json');
-    const db = getDb(c.env);
 
     const [updatedProduct] = await db
       .update(products)
@@ -264,7 +264,6 @@ app.put('/:id/stock', zValidator('json', StockUpdateSchema), async c => {
   try {
     const id = c.req.param('id');
     const { stock_quantity, in_stock } = c.req.valid('json');
-    const db = getDb(c.env);
 
     const updateData: any = {
       stock_quantity,

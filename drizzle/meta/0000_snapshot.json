@@ -1,5 +1,5 @@
 {
-  "id": "e63d1575-3575-496b-b148-07628f506eed",
+  "id": "ab7bf9a1-b963-4abf-aa01-00e98740aaf8",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -36,38 +36,8 @@
         }
       },
       "indexes": {
-        "bookmarks_user_idx": {
-          "name": "bookmarks_user_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "bookmarks_product_idx": {
-          "name": "bookmarks_product_idx",
-          "columns": [
-            {
-              "expression": "product_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "bookmarks_user_product_idx": {
-          "name": "bookmarks_user_product_idx",
+        "idx_bookmarks_user_product": {
+          "name": "idx_bookmarks_user_product",
           "columns": [
             {
               "expression": "user_id",
@@ -168,38 +138,8 @@
         }
       },
       "indexes": {
-        "cart_items_user_idx": {
-          "name": "cart_items_user_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "cart_items_product_idx": {
-          "name": "cart_items_product_idx",
-          "columns": [
-            {
-              "expression": "product_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "cart_items_user_product_idx": {
-          "name": "cart_items_user_product_idx",
+        "idx_cart_items_user_product": {
+          "name": "idx_cart_items_user_product",
           "columns": [
             {
               "expression": "user_id",
@@ -336,8 +276,8 @@
         }
       },
       "indexes": {
-        "categories_name_idx": {
-          "name": "categories_name_idx",
+        "idx_categories_name_active_not_deleted": {
+          "name": "idx_categories_name_active_not_deleted",
           "columns": [
             {
               "expression": "name",
@@ -347,66 +287,7 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "categories_slug_idx": {
-          "name": "categories_slug_idx",
-          "columns": [
-            {
-              "expression": "slug",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "categories_active_idx": {
-          "name": "categories_active_idx",
-          "columns": [
-            {
-              "expression": "is_active",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "categories_deleted_at_idx": {
-          "name": "categories_deleted_at_idx",
-          "columns": [
-            {
-              "expression": "deleted_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "categories_created_at_idx": {
-          "name": "categories_created_at_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
+          "where": "\"categories\".\"is_active\" = true AND \"categories\".\"deleted_at\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -471,8 +352,8 @@
         }
       },
       "indexes": {
-        "email_verification_tokens_user_id_idx": {
-          "name": "email_verification_tokens_user_id_idx",
+        "idx_email_verification_tokens_user_id": {
+          "name": "idx_email_verification_tokens_user_id",
           "columns": [
             {
               "expression": "user_id",
@@ -486,11 +367,11 @@
           "method": "btree",
           "with": {}
         },
-        "email_verification_tokens_token_hash_idx": {
-          "name": "email_verification_tokens_token_hash_idx",
+        "idx_email_verification_tokens_expires_at": {
+          "name": "idx_email_verification_tokens_expires_at",
           "columns": [
             {
-              "expression": "token_hash",
+              "expression": "expires_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -582,6 +463,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "product_snapshot": {
+          "name": "product_snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -598,8 +485,8 @@
         }
       },
       "indexes": {
-        "order_items_order_idx": {
-          "name": "order_items_order_idx",
+        "idx_order_items_order_id": {
+          "name": "idx_order_items_order_id",
           "columns": [
             {
               "expression": "order_id",
@@ -613,8 +500,8 @@
           "method": "btree",
           "with": {}
         },
-        "order_items_product_idx": {
-          "name": "order_items_product_idx",
+        "idx_order_items_product_id": {
+          "name": "idx_order_items_product_id",
           "columns": [
             {
               "expression": "product_id",
@@ -709,21 +596,21 @@
           "name": "tax_amount",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": 0
         },
         "shipping_amount": {
           "name": "shipping_amount",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": 0
         },
         "discount_amount": {
           "name": "discount_amount",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": 0
         },
         "shipping_address": {
@@ -731,6 +618,12 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true
+        },
+        "billing_address": {
+          "name": "billing_address",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         },
         "payment_method": {
           "name": "payment_method",
@@ -742,11 +635,17 @@
           "name": "payment_status",
           "type": "varchar(20)",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": "'PENDING'"
         },
         "payment_id": {
           "name": "payment_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "payment_transaction_id": {
+          "name": "payment_transaction_id",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
@@ -772,6 +671,18 @@
         "delivered_at": {
           "name": "delivered_at",
           "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancellation_reason": {
+          "name": "cancellation_reason",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -815,8 +726,8 @@
         }
       },
       "indexes": {
-        "orders_user_idx": {
-          "name": "orders_user_idx",
+        "idx_orders_user_id": {
+          "name": "idx_orders_user_id",
           "columns": [
             {
               "expression": "user_id",
@@ -830,23 +741,8 @@
           "method": "btree",
           "with": {}
         },
-        "orders_order_number_idx": {
-          "name": "orders_order_number_idx",
-          "columns": [
-            {
-              "expression": "order_number",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "orders_status_idx": {
-          "name": "orders_status_idx",
+        "idx_orders_status_not_deleted": {
+          "name": "idx_orders_status_not_deleted",
           "columns": [
             {
               "expression": "status",
@@ -856,12 +752,13 @@
             }
           ],
           "isUnique": false,
+          "where": "\"orders\".\"deleted_at\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
         },
-        "orders_payment_status_idx": {
-          "name": "orders_payment_status_idx",
+        "idx_orders_payment_status_not_deleted": {
+          "name": "idx_orders_payment_status_not_deleted",
           "columns": [
             {
               "expression": "payment_status",
@@ -871,27 +768,13 @@
             }
           ],
           "isUnique": false,
+          "where": "\"orders\".\"deleted_at\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
         },
-        "orders_deleted_at_idx": {
-          "name": "orders_deleted_at_idx",
-          "columns": [
-            {
-              "expression": "deleted_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "orders_created_at_idx": {
-          "name": "orders_created_at_idx",
+        "idx_orders_created_at_not_deleted": {
+          "name": "idx_orders_created_at_not_deleted",
           "columns": [
             {
               "expression": "created_at",
@@ -901,6 +784,7 @@
             }
           ],
           "isUnique": false,
+          "where": "\"orders\".\"deleted_at\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -979,8 +863,8 @@
         }
       },
       "indexes": {
-        "password_reset_tokens_user_id_idx": {
-          "name": "password_reset_tokens_user_id_idx",
+        "idx_password_reset_tokens_user_id": {
+          "name": "idx_password_reset_tokens_user_id",
           "columns": [
             {
               "expression": "user_id",
@@ -994,11 +878,11 @@
           "method": "btree",
           "with": {}
         },
-        "password_reset_tokens_token_hash_idx": {
-          "name": "password_reset_tokens_token_hash_idx",
+        "idx_password_reset_tokens_expires_at": {
+          "name": "idx_password_reset_tokens_expires_at",
           "columns": [
             {
-              "expression": "token_hash",
+              "expression": "expires_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1083,8 +967,7 @@
           "name": "tags",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'[]'::jsonb"
+          "notNull": false
         },
         "weight": {
           "name": "weight",
@@ -1102,8 +985,7 @@
           "name": "benefits",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'[]'::jsonb"
+          "notNull": false
         },
         "in_stock": {
           "name": "in_stock",
@@ -1116,7 +998,7 @@
           "name": "stock_quantity",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": 0
         },
         "featured": {
@@ -1191,38 +1073,8 @@
         }
       },
       "indexes": {
-        "products_name_idx": {
-          "name": "products_name_idx",
-          "columns": [
-            {
-              "expression": "name",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "products_slug_idx": {
-          "name": "products_slug_idx",
-          "columns": [
-            {
-              "expression": "slug",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "products_category_idx": {
-          "name": "products_category_idx",
+        "idx_products_category_id": {
+          "name": "idx_products_category_id",
           "columns": [
             {
               "expression": "category_id",
@@ -1236,53 +1088,24 @@
           "method": "btree",
           "with": {}
         },
-        "products_featured_idx": {
-          "name": "products_featured_idx",
+        "idx_products_created_at_active_not_deleted": {
+          "name": "idx_products_created_at_active_not_deleted",
           "columns": [
             {
-              "expression": "featured",
+              "expression": "created_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             }
           ],
           "isUnique": false,
+          "where": "\"products\".\"is_active\" = true AND \"products\".\"deleted_at\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
         },
-        "products_active_idx": {
-          "name": "products_active_idx",
-          "columns": [
-            {
-              "expression": "is_active",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "products_stock_idx": {
-          "name": "products_stock_idx",
-          "columns": [
-            {
-              "expression": "in_stock",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "products_price_idx": {
-          "name": "products_price_idx",
+        "idx_products_price_active_not_deleted": {
+          "name": "idx_products_price_active_not_deleted",
           "columns": [
             {
               "expression": "price",
@@ -1292,30 +1115,38 @@
             }
           ],
           "isUnique": false,
+          "where": "\"products\".\"is_active\" = true AND \"products\".\"deleted_at\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
         },
-        "products_deleted_at_idx": {
-          "name": "products_deleted_at_idx",
+        "idx_products_featured_created_active_not_deleted": {
+          "name": "idx_products_featured_created_active_not_deleted",
           "columns": [
             {
-              "expression": "deleted_at",
+              "expression": "featured",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             }
           ],
           "isUnique": false,
+          "where": "\"products\".\"is_active\" = true AND \"products\".\"deleted_at\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
         },
-        "products_created_at_idx": {
-          "name": "products_created_at_idx",
+        "idx_products_name": {
+          "name": "idx_products_name",
           "columns": [
             {
-              "expression": "created_at",
+              "expression": "name",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1400,8 +1231,29 @@
         }
       },
       "indexes": {
-        "refresh_tokens_user_id_idx": {
-          "name": "refresh_tokens_user_id_idx",
+        "idx_refresh_tokens_token_user": {
+          "name": "idx_refresh_tokens_token_user",
+          "columns": [
+            {
+              "expression": "token_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_refresh_tokens_user_id": {
+          "name": "idx_refresh_tokens_user_id",
           "columns": [
             {
               "expression": "user_id",
@@ -1415,11 +1267,11 @@
           "method": "btree",
           "with": {}
         },
-        "refresh_tokens_token_hash_idx": {
-          "name": "refresh_tokens_token_hash_idx",
+        "idx_refresh_tokens_expires_at": {
+          "name": "idx_refresh_tokens_expires_at",
           "columns": [
             {
-              "expression": "token_hash",
+              "expression": "expires_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1534,84 +1386,15 @@
         }
       },
       "indexes": {
-        "reviews_product_idx": {
-          "name": "reviews_product_idx",
+        "idx_reviews_product_id_created_at": {
+          "name": "idx_reviews_product_id_created_at",
           "columns": [
             {
               "expression": "product_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "reviews_user_idx": {
-          "name": "reviews_user_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "reviews_rating_idx": {
-          "name": "reviews_rating_idx",
-          "columns": [
-            {
-              "expression": "rating",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "reviews_verified_idx": {
-          "name": "reviews_verified_idx",
-          "columns": [
-            {
-              "expression": "is_verified",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "reviews_deleted_at_idx": {
-          "name": "reviews_deleted_at_idx",
-          "columns": [
-            {
-              "expression": "deleted_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "reviews_created_at_idx": {
-          "name": "reviews_created_at_idx",
-          "columns": [
+            },
             {
               "expression": "created_at",
               "isExpression": false,
@@ -1716,8 +1499,8 @@
         }
       },
       "indexes": {
-        "user_sessions_user_id_idx": {
-          "name": "user_sessions_user_id_idx",
+        "idx_user_sessions_user_id": {
+          "name": "idx_user_sessions_user_id",
           "columns": [
             {
               "expression": "user_id",
@@ -1731,11 +1514,11 @@
           "method": "btree",
           "with": {}
         },
-        "user_sessions_session_token_idx": {
-          "name": "user_sessions_session_token_idx",
+        "idx_user_sessions_expires_at": {
+          "name": "idx_user_sessions_expires_at",
           "columns": [
             {
-              "expression": "session_token",
+              "expression": "expires_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1901,8 +1684,8 @@
         }
       },
       "indexes": {
-        "users_name_idx": {
-          "name": "users_name_idx",
+        "idx_users_name": {
+          "name": "idx_users_name",
           "columns": [
             {
               "expression": "name",
@@ -1916,8 +1699,8 @@
           "method": "btree",
           "with": {}
         },
-        "users_email_idx": {
-          "name": "users_email_idx",
+        "idx_users_email": {
+          "name": "idx_users_email",
           "columns": [
             {
               "expression": "email",
@@ -1931,8 +1714,8 @@
           "method": "btree",
           "with": {}
         },
-        "users_role_idx": {
-          "name": "users_role_idx",
+        "idx_users_role_not_deleted": {
+          "name": "idx_users_role_not_deleted",
           "columns": [
             {
               "expression": "role",
@@ -1942,42 +1725,13 @@
             }
           ],
           "isUnique": false,
+          "where": "\"users\".\"deleted_at\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
         },
-        "users_deleted_at_idx": {
-          "name": "users_deleted_at_idx",
-          "columns": [
-            {
-              "expression": "deleted_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "users_created_at_idx": {
-          "name": "users_created_at_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "users_verified_idx": {
-          "name": "users_verified_idx",
+        "idx_users_is_verified_not_deleted": {
+          "name": "idx_users_is_verified_not_deleted",
           "columns": [
             {
               "expression": "is_verified",
@@ -1987,36 +1741,23 @@
             }
           ],
           "isUnique": false,
+          "where": "\"users\".\"deleted_at\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
         },
-        "users_google_id_idx": {
-          "name": "users_google_id_idx",
+        "idx_users_created_at_not_deleted": {
+          "name": "idx_users_created_at_not_deleted",
           "columns": [
             {
-              "expression": "google_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "users_oauth_provider_idx": {
-          "name": "users_oauth_provider_idx",
-          "columns": [
-            {
-              "expression": "oauth_provider",
+              "expression": "created_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             }
           ],
           "isUnique": false,
+          "where": "\"users\".\"deleted_at\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -2030,6 +1771,13 @@
           "nullsNotDistinct": false,
           "columns": [
             "email"
+          ]
+        },
+        "users_google_id_unique": {
+          "name": "users_google_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "google_id"
           ]
         }
       },

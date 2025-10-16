@@ -1,27 +1,33 @@
-import { and, desc, eq, ilike, sql } from 'drizzle-orm';
 import {
-  categories,
-  getDb,
-  products,
-  reviews,
-  type Category,
-  type Product,
-  type Review,
-} from '../db';
+  and,
+  asc,
+  desc,
+  eq,
+  ilike,
+  InferSelectModel,
+  isNull,
+  sql,
+} from "drizzle-orm";
+import { getDb } from "../db/db";
+import { categories, products, reviews } from "../db/schema";
+
+export type Product = InferSelectModel<typeof products>;
+export type Review = InferSelectModel<typeof reviews>;
+export type Category = InferSelectModel<typeof categories>;
 
 export interface ProductFilters {
   category?: string;
   search?: string;
   featured?: boolean;
   inStock?: boolean;
-  sortBy?: 'name' | 'price' | 'newest' | 'rating';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?: "name" | "price" | "newest" | "rating";
+  sortOrder?: "asc" | "desc";
   limit?: number;
   offset?: number;
 }
 
 export interface ProductWithCategory extends Product {
-  category: Category;
+  category: Category | null;
   averageRating?: number;
   reviewCount?: number;
 }
@@ -34,57 +40,68 @@ export class ProductService {
   }
 
   // Get all products with filters
-  async getProducts(filters: ProductFilters = {}): Promise<ProductWithCategory[]> {
+  async getProducts(
+    filters: ProductFilters = {}
+  ): Promise<ProductWithCategory[]> {
     const {
       category,
       search,
       featured,
       inStock,
-      sortBy = 'newest',
-      sortOrder = 'desc',
+      sortBy = "newest",
+      sortOrder = "desc",
       limit = 50,
       offset = 0,
     } = filters;
 
     // Build where conditions
-    const whereConditions = [eq(products.is_active, true)];
+    const whereConditions = [
+      eq(products.is_active, true) as any,
+      isNull(products.deleted_at) as any,
+    ];
 
     if (category) {
-      whereConditions.push(eq(categories.slug, category));
+      // filter by category slug
+      whereConditions.push(eq(categories.slug, category) as any);
     }
 
     if (search) {
-      whereConditions.push(ilike(products.name, `%${search}%`));
+      whereConditions.push(ilike(products.name, `%${search}%`) as any);
     }
 
     if (featured !== undefined) {
-      whereConditions.push(eq(products.featured, featured));
+      whereConditions.push(eq(products.featured, featured) as any);
     }
 
     if (inStock !== undefined) {
-      whereConditions.push(eq(products.in_stock, inStock));
+      whereConditions.push(eq(products.in_stock, inStock) as any);
     }
 
     // Build order by clause
-    let orderByClause;
-    switch (sortBy) {
-      case 'name':
-        orderByClause = sortOrder === 'asc' ? products.name : desc(products.name);
-        break;
-      case 'price':
-        orderByClause = sortOrder === 'asc' ? products.price : desc(products.price);
-        break;
-      case 'rating':
-        orderByClause =
-          sortOrder === 'asc' ? sql`AVG(${reviews.rating}) ASC` : sql`AVG(${reviews.rating}) DESC`;
-        break;
-      case 'newest':
-      default:
-        orderByClause = sortOrder === 'asc' ? products.created_at : desc(products.created_at);
-        break;
-    }
+    const orderByClause =
+      sortBy === "name"
+        ? sortOrder === "asc"
+          ? asc(products.name)
+          : desc(products.name)
+        : sortBy === "price"
+        ? sortOrder === "asc"
+          ? asc(products.price)
+          : desc(products.price)
+        : sortBy === "rating"
+        ? sortOrder === "asc"
+          ? sql`AVG(${reviews.rating}) ASC`
+          : sql`AVG(${reviews.rating}) DESC`
+        : // newest (created_at)
+        sortOrder === "asc"
+        ? asc(products.created_at)
+        : desc(products.created_at);
 
-    const result = await this.db
+    // Compose query
+    const whereExpr = whereConditions.length
+      ? and(...whereConditions)
+      : undefined;
+
+    const query = this.db
       .select({
         id: products.id,
         name: products.name,
@@ -112,6 +129,8 @@ export class ProductService {
           is_active: categories.is_active,
           created_at: categories.created_at,
           updated_at: categories.updated_at,
+          deleted_at: categories.deleted_at,
+          deleted_by: categories.deleted_by,
         },
         averageRating: sql<number>`COALESCE(AVG(${reviews.rating}), 0)`,
         reviewCount: sql<number>`COUNT(${reviews.id})`,
@@ -119,18 +138,21 @@ export class ProductService {
       .from(products)
       .leftJoin(categories, eq(products.category_id, categories.id))
       .leftJoin(reviews, eq(products.id, reviews.product_id))
-      .where(and(...whereConditions))
       .groupBy(products.id, categories.id)
       .orderBy(orderByClause)
       .limit(limit)
       .offset(offset);
 
-    return result as ProductWithCategory[];
+    const result = whereExpr ? await query.where(whereExpr) : await query;
+
+    return result as unknown as ProductWithCategory[];
   }
 
   // Get product by ID
   async getProductById(id: string): Promise<ProductWithCategory | null> {
-    const result = await this.db
+    if (!id) return null;
+
+    const rows = await this.db
       .select({
         id: products.id,
         name: products.name,
@@ -158,6 +180,8 @@ export class ProductService {
           is_active: categories.is_active,
           created_at: categories.created_at,
           updated_at: categories.updated_at,
+          deleted_at: categories.deleted_at,
+          deleted_by: categories.deleted_by,
         },
         averageRating: sql<number>`COALESCE(AVG(${reviews.rating}), 0)`,
         reviewCount: sql<number>`COUNT(${reviews.id})`,
@@ -165,11 +189,17 @@ export class ProductService {
       .from(products)
       .leftJoin(categories, eq(products.category_id, categories.id))
       .leftJoin(reviews, eq(products.id, reviews.product_id))
-      .where(and(eq(products.id, id), eq(products.is_active, true)))
+      .where(
+        and(
+          eq(products.id, id),
+          eq(products.is_active, true),
+          isNull(products.deleted_at)
+        )
+      )
       .groupBy(products.id, categories.id)
       .limit(1);
 
-    return result.length > 0 ? (result[0] as ProductWithCategory) : null;
+    return rows.length > 0 ? (rows[0] as unknown as ProductWithCategory) : null;
   }
 
   // Get featured products
@@ -186,7 +216,10 @@ export class ProductService {
   }
 
   // Search products
-  async searchProducts(query: string, limit?: number): Promise<ProductWithCategory[]> {
+  async searchProducts(
+    query: string,
+    limit?: number
+  ): Promise<ProductWithCategory[]> {
     return this.getProducts({ search: query, limit });
   }
 
@@ -195,7 +228,7 @@ export class ProductService {
     const result = await this.db
       .select()
       .from(categories)
-      .where(eq(categories.is_active, true))
+      .where(and(eq(categories.is_active, true), isNull(categories.deleted_at)))
       .orderBy(categories.name);
 
     return result;
@@ -203,13 +236,19 @@ export class ProductService {
 
   // Get category by slug
   async getCategoryBySlug(slug: string): Promise<Category | null> {
-    const result = await this.db
+    const rows = await this.db
       .select()
       .from(categories)
-      .where(and(eq(categories.slug, slug), eq(categories.is_active, true)))
+      .where(
+        and(
+          eq(categories.slug, slug),
+          eq(categories.is_active, true),
+          isNull(categories.deleted_at)
+        )
+      )
       .limit(1);
 
-    return result.length > 0 ? result[0] : null;
+    return rows.length > 0 ? rows[0] : null;
   }
 
   // Get reviews for a product

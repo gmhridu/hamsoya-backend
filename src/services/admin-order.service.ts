@@ -1,17 +1,24 @@
 import { and, count, desc, eq, ilike, isNull, or, sql, asc, gte, lte, inArray } from 'drizzle-orm';
-import {
-  getDb,
-  orders,
-  orderItems,
-  products,
-  users,
-  type Order,
-  type OrderItem,
-  type NewOrder,
-  insertOrderSchema,
-  updateOrderSchema,
-} from '../db';
+import type { InferSelectModel } from 'drizzle-orm';
+import { z } from 'zod';
 import { AppError } from '../utils/error-handler';
+import { getDb } from '../db/db';
+import { orderItems, orders, products, users } from '../db/schema';
+
+// Type definitions
+export type Order = InferSelectModel<typeof orders>;
+export type OrderItem = InferSelectModel<typeof orderItems>;
+
+// Zod schemas
+const updateOrderSchema = z.object({
+  status: z.enum(['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']).optional(),
+  payment_status: z.enum(['PENDING', 'PAID', 'FAILED', 'REFUNDED']).optional(),
+  notes: z.string().optional(),
+  tracking_number: z.string().optional(),
+  estimated_delivery: z.date().optional(),
+  delivered_at: z.date().optional(),
+  updated_by: z.string().uuid(),
+});
 
 export interface AdminOrderFilters {
   search?: string;
@@ -41,7 +48,7 @@ export interface AdminOrderResponse {
   };
 }
 
-export interface AdminOrderWithDetails extends Order {
+export interface AdminOrderWithDetails extends Omit<Order, 'created_by' | 'updated_by' | 'deleted_by' | 'cancelled_at' | 'cancellation_reason'> {
   customer: {
     id: string;
     name: string;
@@ -53,7 +60,7 @@ export interface AdminOrderWithDetails extends Order {
   days_since_created?: number;
 }
 
-export interface OrderItemWithProduct extends OrderItem {
+export interface OrderItemWithProduct extends Omit<OrderItem, 'product_snapshot'> {
   product: {
     id: string;
     name: string;
@@ -300,7 +307,7 @@ export class AdminOrderService {
     return {
       ...order,
       items,
-    } as AdminOrderWithDetails;
+    } as unknown as AdminOrderWithDetails;
   }
 
   private async getOrderItems(orderId: string): Promise<OrderItemWithProduct[]> {
@@ -338,18 +345,20 @@ export class AdminOrderService {
       throw new AppError('Order not found', 404);
     }
 
-    const validatedData: any = updateOrderSchema.parse(updateData);
+    const validatedData = updateOrderSchema.safeParse(updateData);
+    if (!validatedData.success) {
+      throw new AppError(validatedData.error.issues.map(e => e.message).join(', '), 400);
+    }
 
-    if (updateData.status === 'DELIVERED' && !updateData.delivered_at) {
-      (validatedData as any).delivered_at = new Date();
+    const updatePayload: any = { ...validatedData.data, updated_at: new Date() };
+
+    if (validatedData.data.status === 'DELIVERED' && !validatedData.data.delivered_at) {
+      updatePayload.delivered_at = new Date();
     }
 
     await this.db
       .update(orders)
-      .set({
-        ...validatedData,
-        updated_at: new Date(),
-      })
+      .set(updatePayload)
       .where(eq(orders.id, id))
       .returning({ id: orders.id });
 

@@ -1,17 +1,41 @@
-import { and, count, desc, eq, ilike, isNull, or, sql, asc, gte, lte, inArray } from 'drizzle-orm';
-import {
-  getDb,
-  products,
-  categories,
-  reviews,
-  orderItems,
-  type Product,
-  type NewProduct,
-  type Category,
-  insertProductSchema,
-  updateProductSchema,
-} from '../db';
+
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte, or, sql } from 'drizzle-orm';
+import { getDb } from '../db/db';
 import { AppError } from '../utils/error-handler';
+import { categories, orderItems, products, reviews } from '../db/schema';
+import { z } from 'zod';
+import type { InferSelectModel, InferInsertModel } from 'drizzle-orm';
+
+// Type definitions
+export type Product = InferSelectModel<typeof products>;
+export type Category = InferSelectModel<typeof categories>;
+export type NewProduct = InferInsertModel<typeof products>;
+
+// Zod schemas
+const insertProductSchema = z.object({
+  name: z.string().min(1).max(255),
+  description: z.string().min(1),
+  price: z.number().int().positive(),
+  original_price: z.number().int().positive().optional(),
+  category_id: z.string().uuid(),
+  images: z.array(z.string().url()),
+  tags: z.array(z.string()).optional(),
+  weight: z.string().optional(),
+  origin: z.string().optional(),
+  benefits: z.array(z.string()).optional(),
+  in_stock: z.boolean().optional().default(true),
+  stock_quantity: z.number().int().min(0).optional().default(0),
+  featured: z.boolean().optional().default(false),
+  is_active: z.boolean().optional().default(true),
+  slug: z.string().optional(),
+  meta_title: z.string().optional(),
+  meta_description: z.string().optional(),
+  created_by: z.string().uuid(),
+});
+
+const updateProductSchema = insertProductSchema.partial().omit({ created_by: true }).extend({
+  updated_by: z.string(),
+});
 
 export interface AdminProductFilters {
   search?: string;
@@ -26,10 +50,18 @@ export interface AdminProductFilters {
   created_from?: Date;
   created_to?: Date;
   include_deleted?: boolean;
-  sortBy?: 'name' | 'price' | 'stock_quantity' | 'created_at' | 'updated_at' | 'featured' | 'sales_count';
+  sortBy?: 'name' | 'price' | 'stock_quantity' | 'created_at' | 'updated_at' | 'featured' | 'rating' | 'sales_count';
   sortOrder?: 'asc' | 'desc';
   page?: number;
   limit?: number;
+}
+
+export interface AdminProductWithStats extends Omit<Product, 'category'> {
+  category: Category | null;
+  averageRating?: number;
+  reviewCount?: number;
+  salesCount?: number;
+  is_low_stock?: boolean;
 }
 
 export interface AdminProductResponse {
@@ -44,70 +76,24 @@ export interface AdminProductResponse {
   };
 }
 
-export interface AdminProductWithStats extends Product {
-  category: Category;
-  average_rating?: number;
-  review_count?: number;
-  sales_count?: number;
-  total_revenue?: number;
-  last_sold_date?: Date;
-  days_since_created?: number;
-  is_low_stock?: boolean;
-}
-
 export interface AdminProductStats {
   total_products: number;
   active_products: number;
   inactive_products: number;
-  featured_products: number;
-  out_of_stock_products: number;
-  low_stock_products: number;
   deleted_products: number;
+  low_stock_products: number;
+  out_of_stock_products: number;
+  featured_products: number;
   products_this_month: number;
   products_growth_rate: number;
-  total_revenue: number;
   average_product_price: number;
 }
 
-export interface CreateAdminProductData {
-  name: string;
-  description: string;
-  price: number;
-  original_price?: number;
-  category_id: string;
-  images: string[];
-  tags?: string[];
-  weight?: string;
-  origin?: string;
-  benefits?: string[];
-  in_stock?: boolean;
-  stock_quantity?: number;
-  featured?: boolean;
-  is_active?: boolean;
-  slug?: string;
-  meta_title?: string;
-  meta_description?: string;
+export interface CreateAdminProductData extends Omit<NewProduct, 'id' | 'created_at' | 'updated_at' | 'deleted_at' | 'deleted_by'> {
   created_by: string;
 }
 
-export interface UpdateAdminProductData {
-  name?: string;
-  description?: string;
-  price?: number;
-  original_price?: number;
-  category_id?: string;
-  images?: string[];
-  tags?: string[];
-  weight?: string;
-  origin?: string;
-  benefits?: string[];
-  in_stock?: boolean;
-  stock_quantity?: number;
-  featured?: boolean;
-  is_active?: boolean;
-  slug?: string;
-  meta_title?: string;
-  meta_description?: string;
+export interface UpdateAdminProductData extends Partial<Omit<NewProduct, 'id' | 'created_at' | 'updated_at' | 'deleted_at' | 'deleted_by'>> {
   updated_by: string;
 }
 
@@ -125,7 +111,9 @@ export class AdminProductService {
     this.db = getDb(env);
   }
 
-  async getProducts(filters: AdminProductFilters = {}): Promise<AdminProductResponse> {
+  // Helpers
+
+  private buildWhere(filters: AdminProductFilters) {
     const {
       search,
       category_id,
@@ -139,6 +127,99 @@ export class AdminProductService {
       created_from,
       created_to,
       include_deleted = false,
+    } = filters;
+
+    const where: any[] = [];
+
+    if (!include_deleted) {
+      where.push(isNull(products.deleted_at));
+    }
+
+    if (typeof is_active === 'boolean') {
+      where.push(eq(products.is_active, is_active));
+    }
+
+    if (typeof featured === 'boolean') {
+      where.push(eq(products.featured, featured));
+    }
+
+    if (typeof in_stock === 'boolean') {
+      where.push(eq(products.in_stock, in_stock));
+    }
+
+    if (low_stock) {
+      where.push(sql`${products.stock_quantity} <= ${stock_threshold}`);
+    }
+
+    if (category_id) {
+      where.push(eq(products.category_id, category_id));
+    }
+
+    if (price_min != null) {
+      where.push(gte(products.price, price_min));
+    }
+
+    if (price_max != null) {
+      where.push(lte(products.price, price_max));
+    }
+
+    if (created_from) {
+      where.push(gte(products.created_at, created_from));
+    }
+
+    if (created_to) {
+      where.push(lte(products.created_at, created_to));
+    }
+
+    if (search) {
+      // Search by product name or description
+      const s = `%${search}%`;
+      where.push(
+        or(
+          ilike(products.name, s),
+          ilike(products.description, s),
+        )
+      );
+    }
+
+    if (where.length === 0) return undefined as unknown as ReturnType<typeof and>;
+    return and(...where);
+  }
+
+  private buildOrderBy(sortBy?: AdminProductFilters['sortBy'], sortOrder?: AdminProductFilters['sortOrder']) {
+    const order = sortOrder === 'asc' ? 'asc' : 'desc';
+
+    switch (sortBy) {
+      case 'name':
+        return order === 'asc' ? asc(products.name) : desc(products.name);
+      case 'price':
+        return order === 'asc' ? asc(products.price) : desc(products.price);
+      case 'stock_quantity':
+        return order === 'asc' ? asc(products.stock_quantity) : desc(products.stock_quantity);
+      case 'updated_at':
+        return order === 'asc' ? asc(products.updated_at) : desc(products.updated_at);
+      case 'featured':
+        return order === 'asc' ? asc(products.featured) : desc(products.featured);
+      case 'rating':
+        // We'll order by computed averageRating (ensure we include reviews join and groupBy)
+        return order === 'asc'
+          ? sql`AVG(${reviews.rating}) ASC`
+          : sql`AVG(${reviews.rating}) DESC`;
+      case 'sales_count':
+        // We'll order by computed salesCount (ensure we include orderItems join and groupBy)
+        return order === 'asc'
+          ? sql`COALESCE(SUM(${orderItems.quantity}), 0) ASC`
+          : sql`COALESCE(SUM(${orderItems.quantity}), 0) DESC`;
+      case 'created_at':
+      default:
+        return order === 'asc' ? asc(products.created_at) : desc(products.created_at);
+    }
+  }
+
+  // Core operations
+
+  async getProducts(filters: AdminProductFilters = {}): Promise<AdminProductResponse> {
+    const {
       sortBy = 'created_at',
       sortOrder = 'desc',
       page = 1,
@@ -146,136 +227,80 @@ export class AdminProductService {
     } = filters;
 
     const offset = (page - 1) * limit;
-    const whereConditions = [];
 
-    if (!include_deleted) {
-      whereConditions.push(isNull(products.deleted_at));
-    }
+    const whereExpr = this.buildWhere(filters);
+    const orderByExpr = this.buildOrderBy(sortBy, sortOrder);
 
-    if (search) {
-      whereConditions.push(
-        or(
-          ilike(products.name, `%${search}%`),
-          ilike(products.description, `%${search}%`),
-          sql`${products.tags}::text ILIKE ${'%' + search + '%'}`
-        )
-      );
-    }
+    // Data query with stats
+    const rows = await this.db
+      .select({
+        // product fields
+        id: products.id,
+        name: products.name,
+        description: products.description,
+        price: products.price,
+        original_price: products.original_price,
+        category_id: products.category_id,
+        images: products.images,
+        tags: products.tags,
+        weight: products.weight,
+        origin: products.origin,
+        benefits: products.benefits,
+        in_stock: products.in_stock,
+        stock_quantity: products.stock_quantity,
+        featured: products.featured,
+        is_active: products.is_active,
+        created_at: products.created_at,
+        updated_at: products.updated_at,
+        deleted_at: products.deleted_at,
+        deleted_by: products.deleted_by,
 
-    if (category_id) {
-      whereConditions.push(eq(products.category_id, category_id));
-    }
+        // category snapshot
+        category: {
+          id: categories.id,
+          name: categories.name,
+          description: categories.description,
+          image: categories.image,
+          slug: categories.slug,
+          is_active: categories.is_active,
+          created_at: categories.created_at,
+          updated_at: categories.updated_at,
+          deleted_at: categories.deleted_at,
+          deleted_by: categories.deleted_by,
+        },
 
-    if (featured !== undefined) {
-      whereConditions.push(eq(products.featured, featured));
-    }
+        // computed stats
+        averageRating: sql<number>`COALESCE(AVG(${reviews.rating}), 0)`,
+        reviewCount: sql<number>`COUNT(${reviews.id})`,
+        salesCount: sql<number>`COALESCE(SUM(${orderItems.quantity}), 0)`,
+        is_low_stock: sql<boolean>`CASE WHEN ${products.stock_quantity} <= 10 THEN true ELSE false END`,
+      })
+      .from(products)
+      .leftJoin(categories, eq(products.category_id, categories.id))
+      .leftJoin(reviews, and(eq(reviews.product_id, products.id), isNull(reviews.deleted_at)))
+      .leftJoin(orderItems, eq(orderItems.product_id, products.id))
+      .where(whereExpr)
+      .groupBy(products.id, categories.id)
+      .orderBy(orderByExpr)
+      .limit(limit)
+      .offset(offset);
 
-    if (in_stock !== undefined) {
-      whereConditions.push(eq(products.in_stock, in_stock));
-    }
+    // Total count (distinct products)
+    const totalRows = await this.db
+      .select({
+        total: sql<number>`COUNT(DISTINCT ${products.id})`,
+      })
+      .from(products)
+      .leftJoin(categories, eq(products.category_id, categories.id))
+      .leftJoin(reviews, and(eq(reviews.product_id, products.id), isNull(reviews.deleted_at)))
+      .leftJoin(orderItems, eq(orderItems.product_id, products.id))
+      .where(whereExpr);
 
-    if (is_active !== undefined) {
-      whereConditions.push(eq(products.is_active, is_active));
-    }
-
-    if (low_stock) {
-      whereConditions.push(
-        and(
-          eq(products.in_stock, true),
-          sql`${products.stock_quantity} <= ${stock_threshold}`
-        )
-      );
-    }
-
-    if (price_min !== undefined) {
-      whereConditions.push(gte(products.price, price_min));
-    }
-
-    if (price_max !== undefined) {
-      whereConditions.push(lte(products.price, price_max));
-    }
-
-    if (created_from) {
-      whereConditions.push(gte(products.created_at, created_from));
-    }
-
-    if (created_to) {
-      whereConditions.push(lte(products.created_at, created_to));
-    }
-
-    let orderByClause;
-    if (sortBy === 'sales_count') {
-      orderByClause = sortOrder === 'asc' ?
-        asc(sql<number>`COALESCE(SUM(${orderItems.quantity}), 0)`) :
-        desc(sql<number>`COALESCE(SUM(${orderItems.quantity}), 0)`);
-    } else {
-      const orderByColumn = products[sortBy as keyof typeof products] || products.created_at;
-      orderByClause = sortOrder === 'asc' ? asc(orderByColumn as any) : desc(orderByColumn as any);
-    }
-
-    const [productsResult, totalResult] = await Promise.all([
-      this.db
-        .select({
-          id: products.id,
-          name: products.name,
-          description: products.description,
-          price: products.price,
-          original_price: products.original_price,
-          category_id: products.category_id,
-          images: products.images,
-          tags: products.tags,
-          weight: products.weight,
-          origin: products.origin,
-          benefits: products.benefits,
-          in_stock: products.in_stock,
-          stock_quantity: products.stock_quantity,
-          featured: products.featured,
-          is_active: products.is_active,
-          slug: products.slug,
-          meta_title: products.meta_title,
-          meta_description: products.meta_description,
-          created_at: products.created_at,
-          updated_at: products.updated_at,
-          deleted_at: products.deleted_at,
-          category: {
-            id: categories.id,
-            name: categories.name,
-            slug: categories.slug,
-            description: categories.description,
-            image: categories.image,
-            is_active: categories.is_active,
-            created_at: categories.created_at,
-            updated_at: categories.updated_at,
-          },
-          average_rating: sql<number>`COALESCE(AVG(${reviews.rating}), 0)`,
-          review_count: sql<number>`COALESCE(COUNT(DISTINCT ${reviews.id}), 0)`,
-          sales_count: sql<number>`COALESCE(SUM(${orderItems.quantity}), 0)`,
-          total_revenue: sql<number>`COALESCE(SUM(${orderItems.total_price}), 0)`,
-          last_sold_date: sql<Date>`MAX(${orderItems.created_at})`,
-          days_since_created: sql<number>`EXTRACT(DAY FROM NOW() - ${products.created_at})`,
-          is_low_stock: sql<boolean>`${products.stock_quantity} <= ${stock_threshold} AND ${products.in_stock} = true`,
-        })
-        .from(products)
-        .leftJoin(categories, eq(products.category_id, categories.id))
-        .leftJoin(reviews, and(eq(products.id, reviews.product_id), isNull(reviews.deleted_at)))
-        .leftJoin(orderItems, eq(products.id, orderItems.product_id))
-        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-        .groupBy(products.id, categories.id)
-        .orderBy(orderByClause)
-        .limit(limit)
-        .offset(offset),
-
-      this.db
-        .select({ count: count() })
-        .from(products)
-        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined),
-    ]);
-
-    const total = totalResult[0]?.count || 0;
+    const total = totalRows[0]?.total ?? 0;
     const totalPages = Math.ceil(total / limit);
 
     return {
-      products: productsResult as AdminProductWithStats[],
+      products: rows as unknown as AdminProductWithStats[],
       pagination: {
         page,
         limit,
@@ -285,16 +310,12 @@ export class AdminProductService {
         hasPrev: page > 1,
       },
     };
-  }
-
-  async getProductById(id: string, include_deleted = false): Promise<AdminProductWithStats | null> {
-    const whereConditions = [eq(products.id, id)];
-
-    if (!include_deleted) {
-      whereConditions.push(isNull(products.deleted_at));
     }
 
-    const result = await this.db
+  async getProductById(id: string): Promise<AdminProductWithStats | null> {
+    if (!id) throw new AppError('Product ID is required', 400);
+
+    const rows = await this.db
       .select({
         id: products.id,
         name: products.name,
@@ -311,201 +332,117 @@ export class AdminProductService {
         stock_quantity: products.stock_quantity,
         featured: products.featured,
         is_active: products.is_active,
-        slug: products.slug,
-        meta_title: products.meta_title,
-        meta_description: products.meta_description,
         created_at: products.created_at,
         updated_at: products.updated_at,
         deleted_at: products.deleted_at,
-        created_by: products.created_by,
-        updated_by: products.updated_by,
         deleted_by: products.deleted_by,
+
         category: {
           id: categories.id,
           name: categories.name,
-          slug: categories.slug,
           description: categories.description,
           image: categories.image,
+          slug: categories.slug,
           is_active: categories.is_active,
           created_at: categories.created_at,
           updated_at: categories.updated_at,
+          deleted_at: categories.deleted_at,
+          deleted_by: categories.deleted_by,
         },
-        average_rating: sql<number>`COALESCE(AVG(${reviews.rating}), 0)`,
-        review_count: sql<number>`COALESCE(COUNT(DISTINCT ${reviews.id}), 0)`,
-        sales_count: sql<number>`COALESCE(SUM(${orderItems.quantity}), 0)`,
-        total_revenue: sql<number>`COALESCE(SUM(${orderItems.total_price}), 0)`,
-        last_sold_date: sql<Date>`MAX(${orderItems.created_at})`,
-        days_since_created: sql<number>`EXTRACT(DAY FROM NOW() - ${products.created_at})`,
+
+        averageRating: sql<number>`COALESCE(AVG(${reviews.rating}), 0)`,
+        reviewCount: sql<number>`COUNT(${reviews.id})`,
+        salesCount: sql<number>`COALESCE(SUM(${orderItems.quantity}), 0)`,
+        is_low_stock: sql<boolean>`CASE WHEN ${products.stock_quantity} <= 10 THEN true ELSE false END`,
       })
       .from(products)
       .leftJoin(categories, eq(products.category_id, categories.id))
-      .leftJoin(reviews, and(eq(products.id, reviews.product_id), isNull(reviews.deleted_at)))
-      .leftJoin(orderItems, eq(products.id, orderItems.product_id))
-      .where(and(...whereConditions))
+      .leftJoin(reviews, and(eq(reviews.product_id, products.id), isNull(reviews.deleted_at)))
+      .leftJoin(orderItems, eq(orderItems.product_id, products.id))
+      .where(eq(products.id, id))
       .groupBy(products.id, categories.id)
       .limit(1);
 
-    return result.length > 0 ? (result[0] as AdminProductWithStats) : null;
+    if (rows.length === 0) return null;
+    return rows[0] as unknown as AdminProductWithStats;
   }
 
-  async createProduct(productData: CreateAdminProductData): Promise<AdminProductWithStats> {
-    const validatedData: any = insertProductSchema.parse({
-      name: productData.name,
-      description: productData.description,
-      price: productData.price,
-      original_price: productData.original_price,
-      category_id: productData.category_id,
-      images: productData.images,
-      tags: productData.tags,
-      weight: productData.weight,
-      origin: productData.origin,
-      benefits: productData.benefits,
-      in_stock: productData.in_stock ?? true,
-      stock_quantity: productData.stock_quantity ?? 0,
-      featured: productData.featured ?? false,
-      is_active: productData.is_active ?? true,
-      slug: productData.slug,
-      meta_title: productData.meta_title,
-      meta_description: productData.meta_description,
-      created_by: productData.created_by,
-    });
-
-    const categoryExists = await this.db
-      .select({ id: categories.id })
-      .from(categories)
-      .where(and(eq(categories.id, productData.category_id), isNull(categories.deleted_at)))
-      .limit(1);
-
-    if (categoryExists.length === 0) {
-      throw new AppError('Category not found', 404);
+  async createProduct(input: CreateAdminProductData): Promise<Product> {
+    // Validate with existing schema if provided
+    const parsed = insertProductSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new AppError(parsed.error.issues.map(e => e.message).join(', '), 400);
     }
 
-    if (productData.slug) {
-      const slugExists = await this.db
-        .select({ id: products.id })
-        .from(products)
-        .where(and(eq(products.slug, productData.slug), isNull(products.deleted_at)))
-        .limit(1);
-
-      if (slugExists.length > 0) {
-        throw new AppError('Product slug already exists', 409);
-      }
-    }
-
-    const [newProduct] = await this.db
+    const [created] = await this.db
       .insert(products)
-      .values(validatedData)
-      .returning({
-        id: products.id,
-        name: products.name,
-        description: products.description,
-        price: products.price,
-        original_price: products.original_price,
-        category_id: products.category_id,
-        images: products.images,
-        tags: products.tags,
-        weight: products.weight,
-        origin: products.origin,
-        benefits: products.benefits,
-        in_stock: products.in_stock,
-        stock_quantity: products.stock_quantity,
-        featured: products.featured,
-        is_active: products.is_active,
-        slug: products.slug,
-        meta_title: products.meta_title,
-        meta_description: products.meta_description,
-        created_at: products.created_at,
-        updated_at: products.updated_at,
-      });
+      .values(parsed.data)
+      .returning();
 
-    const productWithStats = await this.getProductById(newProduct.id);
-    return productWithStats!;
+    return created;
   }
 
-  async updateProduct(id: string, updateData: UpdateAdminProductData): Promise<AdminProductWithStats> {
-    const existingProduct = await this.getProductById(id);
-    if (!existingProduct) {
-      throw new AppError('Product not found', 404);
+  async updateProduct(id: string, input: UpdateAdminProductData): Promise<Product> {
+    if (!id) throw new AppError('Product ID is required', 400);
+
+    const parsed = updateProductSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new AppError(parsed.error.issues.map(e => e.message).join(', '), 400);
     }
 
-    const validatedData = updateProductSchema.parse(updateData);
+    const [existing] = await this.db.select({ id: products.id }).from(products).where(eq(products.id, id)).limit(1);
+    if (!existing) throw new AppError('Product not found', 404);
 
-    if (updateData.category_id && updateData.category_id !== existingProduct.category_id) {
-      const categoryExists = await this.db
-        .select({ id: categories.id })
-        .from(categories)
-        .where(and(eq(categories.id, updateData.category_id), isNull(categories.deleted_at)))
-        .limit(1);
+    const [updated] = await this.db
+      .update(products)
+      .set({
+        ...parsed.data,
+        updated_at: sql`NOW()`,
+      })
+      .where(eq(products.id, id))
+      .returning();
 
-      if (categoryExists.length === 0) {
-        throw new AppError('Category not found', 404);
-      }
-    }
+    return updated;
+  }
 
-    if (updateData.slug && updateData.slug !== existingProduct.slug) {
-      const slugExists = await this.db
-        .select({ id: products.id })
-        .from(products)
-        .where(and(eq(products.slug, updateData.slug), isNull(products.deleted_at)))
-        .limit(1);
+  async softDeleteProduct(id: string, deletedBy: string): Promise<SoftDeleteResponse> {
+    if (!id) throw new AppError('Product ID is required', 400);
 
-      if (slugExists.length > 0) {
-        throw new AppError('Product slug already exists', 409);
-      }
+    const [existing] = await this.db.select({ id: products.id, deleted_at: products.deleted_at }).from(products).where(eq(products.id, id)).limit(1);
+    if (!existing) throw new AppError('Product not found', 404);
+    if (existing.deleted_at) {
+      return {
+        success: true,
+        message: 'Product already soft-deleted',
+      };
     }
 
     await this.db
       .update(products)
       .set({
-        ...validatedData,
-        updated_at: new Date(),
-      } as any)
-      .where(eq(products.id, id))
-      .returning({ id: products.id });
+        deleted_at: sql`NOW()`,
+        deleted_by: deletedBy,
+        is_active: false,
+      })
+      .where(eq(products.id, id));
 
-    const updatedProduct = await this.getProductById(id);
-    return updatedProduct!;
+    // Optionally return undo token info
+    const undoToken = `undo:${id}:${Date.now()}`;
+    const undoExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    return { success: true, message: 'Product soft-deleted', undo_token: undoToken, undo_expires_at: undoExpiresAt };
   }
 
-  async softDeleteProduct(id: string, deleted_by: string): Promise<SoftDeleteResponse> {
-    const existingProduct = await this.getProductById(id);
-    if (!existingProduct) {
-      throw new AppError('Product not found', 404);
-    }
+  async undoSoftDelete(id: string): Promise<{ success: boolean; message: string }> {
+    if (!id) throw new AppError('Product ID is required', 400);
 
-    if (existingProduct.deleted_at) {
-      throw new AppError('Product is already deleted', 400);
-    }
-
-    await this.db
-      .update(products)
-      .set({
-        deleted_at: new Date(),
-        deleted_by,
-        updated_at: new Date(),
-      } as any)
-      .where(eq(products.id, id))
-      .returning({ id: products.id });
-
-    const undo_token = `undo_product_${id}_${Date.now()}`;
-    const undo_expires_at = new Date(Date.now() + 5000); // 5 seconds
-
-    return {
-      success: true,
-      message: 'Product deleted successfully',
-      undo_token,
-      undo_expires_at,
-    };
-  }
-
-  async undoSoftDelete(id: string): Promise<AdminProductWithStats> {
-    const existingProduct = await this.getProductById(id, true);
-    if (!existingProduct) {
-      throw new AppError('Product not found', 404);
-    }
-
-    if (!existingProduct.deleted_at) {
-      throw new AppError('Product is not deleted', 400);
+    const [existing] = await this.db.select({ id: products.id, deleted_at: products.deleted_at }).from(products).where(eq(products.id, id)).limit(1);
+    if (!existing) throw new AppError('Product not found', 404);
+    if (!existing.deleted_at) {
+      return {
+        success: true,
+        message: 'Product is not deleted',
+      };
     }
 
     await this.db
@@ -513,144 +450,103 @@ export class AdminProductService {
       .set({
         deleted_at: null,
         deleted_by: null,
-        updated_at: new Date(),
-      } as any)
-      .where(eq(products.id, id))
-      .returning({ id: products.id });
+        is_active: true,
+      })
+      .where(eq(products.id, id));
 
-    const restoredProduct = await this.getProductById(id);
-    return restoredProduct!;
+    return { success: true, message: 'Product restored' };
   }
 
-  async permanentDeleteProduct(id: string): Promise<{ message: string }> {
-    const existingProduct = await this.getProductById(id, true);
-    if (!existingProduct) {
-      throw new AppError('Product not found', 404);
-    }
+  async permanentDeleteProduct(id: string): Promise<{ success: boolean; message: string }> {
+    if (!id) throw new AppError('Product ID is required', 400);
+
+    const [existing] = await this.db.select({ id: products.id }).from(products).where(eq(products.id, id)).limit(1);
+    if (!existing) throw new AppError('Product not found', 404);
 
     await this.db.delete(products).where(eq(products.id, id));
 
-    return { message: 'Product permanently deleted' };
+    return { success: true, message: 'Product permanently deleted' };
   }
 
-  async bulkUpdateProducts(
-    productIds: string[],
-    updateData: Partial<UpdateAdminProductData>
-  ): Promise<{ updated_count: number; message: string }> {
-    if (productIds.length === 0) {
-      throw new AppError('No product IDs provided', 400);
+  async bulkUpdateProducts(ids: string[], input: UpdateAdminProductData): Promise<{ success: boolean; count: number }> {
+    if (!ids || ids.length === 0) throw new AppError('No product IDs provided', 400);
+
+    const parsed = updateProductSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new AppError(parsed.error.issues.map(e => e.message).join(', '), 400);
     }
 
-    const validatedData = updateProductSchema.parse(updateData);
-
-    await this.db
+    const result = await this.db
       .update(products)
       .set({
-        ...validatedData,
-        updated_at: new Date(),
-      } as any)
-      .where(and(
-        inArray(products.id, productIds),
-        isNull(products.deleted_at)
-      ))
-      .returning({ id: products.id });
+        ...parsed.data,
+        updated_at: sql`NOW()`,
+      })
+      .where(inArray(products.id, ids));
 
-    return {
-      updated_count: productIds.length,
-      message: `${productIds.length} products updated successfully`,
-    };
+    // drizzle returns the number of updated rows under `rowCount` when using Postgres drivers
+    const count = (result as unknown as { rowCount?: number }).rowCount ?? 0;
+
+    return { success: true, count };
   }
 
-  async bulkSoftDeleteProducts(
-    productIds: string[],
-    deleted_by: string
-  ): Promise<{ deleted_count: number; message: string }> {
-    if (productIds.length === 0) {
-      throw new AppError('No product IDs provided', 400);
-    }
+  async bulkSoftDeleteProducts(ids: string[], deletedBy: string): Promise<{ success: boolean; count: number }> {
+    if (!ids || ids.length === 0) throw new AppError('No product IDs provided', 400);
 
-    await this.db
+    const result = await this.db
       .update(products)
       .set({
-        deleted_at: new Date(),
-        deleted_by,
-        updated_at: new Date(),
-      } as any)
-      .where(and(
-        inArray(products.id, productIds),
-        isNull(products.deleted_at)
-      ))
-      .returning({ id: products.id });
+        deleted_at: sql`NOW()`,
+        deleted_by: deletedBy,
+        is_active: false,
+      })
+      .where(inArray(products.id, ids));
 
-    return {
-      deleted_count: productIds.length,
-      message: `${productIds.length} products deleted successfully`,
-    };
+    const count = (result as unknown as { rowCount?: number }).rowCount ?? 0;
+
+    return { success: true, count };
   }
 
   async getProductStats(): Promise<AdminProductStats> {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const stockThreshold = 10;
 
-    const [
-      totalProducts,
-      activeProducts,
-      inactiveProducts,
-      featuredProducts,
-      outOfStockProducts,
-      lowStockProducts,
-      deletedProducts,
-      productsThisMonth,
-      productsLastMonth,
-      revenueData,
-      averagePriceData,
-    ] = await Promise.all([
-      this.db.select({ count: count() }).from(products).where(isNull(products.deleted_at)),
-      this.db.select({ count: count() }).from(products).where(and(eq(products.is_active, true), isNull(products.deleted_at))),
-      this.db.select({ count: count() }).from(products).where(and(eq(products.is_active, false), isNull(products.deleted_at))),
-      this.db.select({ count: count() }).from(products).where(and(eq(products.featured, true), isNull(products.deleted_at))),
-      this.db.select({ count: count() }).from(products).where(and(eq(products.in_stock, false), isNull(products.deleted_at))),
-      this.db.select({ count: count() }).from(products).where(and(
-        eq(products.in_stock, true),
-        sql`${products.stock_quantity} <= 10`,
-        isNull(products.deleted_at)
-      )),
-      this.db.select({ count: count() }).from(products).where(sql`${products.deleted_at} IS NOT NULL`),
-      this.db.select({ count: count() }).from(products).where(and(gte(products.created_at, thirtyDaysAgo), isNull(products.deleted_at))),
-      this.db.select({ count: count() }).from(products).where(and(
-        gte(products.created_at, new Date(thirtyDaysAgo.getTime() - 30 * 24 * 60 * 60 * 1000)),
-        lte(products.created_at, thirtyDaysAgo),
-        isNull(products.deleted_at)
-      )),
-      this.db.select({
-        total_revenue: sql<number>`COALESCE(SUM(${orderItems.total_price}), 0)`
-      }).from(orderItems).leftJoin(products, eq(orderItems.product_id, products.id)),
-      this.db.select({
-        average_price: sql<number>`COALESCE(AVG(${products.price}), 0)`
-      }).from(products).where(isNull(products.deleted_at)),
-    ]);
+    const [row] = await this.db
+      .select({
+        total_products: sql<number>`COUNT(*)`,
+        active_products: sql<number>`SUM(CASE WHEN ${products.is_active} = true AND ${products.deleted_at} IS NULL THEN 1 ELSE 0 END)`,
+        inactive_products: sql<number>`SUM(CASE WHEN ${products.is_active} = false AND ${products.deleted_at} IS NULL THEN 1 ELSE 0 END)`,
+        deleted_products: sql<number>`SUM(CASE WHEN ${products.deleted_at} IS NOT NULL THEN 1 ELSE 0 END)`,
+        low_stock_products: sql<number>`SUM(CASE WHEN ${products.stock_quantity} <= ${stockThreshold} AND ${products.deleted_at} IS NULL THEN 1 ELSE 0 END)`,
+        out_of_stock_products: sql<number>`SUM(CASE WHEN ${products.stock_quantity} = 0 AND ${products.deleted_at} IS NULL THEN 1 ELSE 0 END)`,
+        featured_products: sql<number>`SUM(CASE WHEN ${products.featured} = true AND ${products.deleted_at} IS NULL THEN 1 ELSE 0 END)`,
+        products_this_month: sql<number>`SUM(CASE WHEN DATE_TRUNC('month', ${products.created_at}) = DATE_TRUNC('month', NOW()) THEN 1 ELSE 0 END)`,
+        products_last_month: sql<number>`SUM(CASE WHEN DATE_TRUNC('month', ${products.created_at}) = DATE_TRUNC('month', NOW() - INTERVAL '1 month') THEN 1 ELSE 0 END)`,
+        average_product_price: sql<number>`AVG(CASE WHEN ${products.deleted_at} IS NULL THEN ${products.price} ELSE NULL END)`,
+      })
+      .from(products);
 
-    const currentMonthCount = productsThisMonth[0]?.count || 0;
-    const lastMonthCount = productsLastMonth[0]?.count || 0;
-    const growthRate = lastMonthCount > 0 ? ((currentMonthCount - lastMonthCount) / lastMonthCount) * 100 : 0;
+    const products_this_month = row?.products_this_month ?? 0;
+    const products_last_month = row?.products_last_month ?? 0;
+    const products_growth_rate = products_last_month > 0 ? ((products_this_month - products_last_month) / products_last_month) * 100 : 0;
 
     return {
-      total_products: totalProducts[0]?.count || 0,
-      active_products: activeProducts[0]?.count || 0,
-      inactive_products: inactiveProducts[0]?.count || 0,
-      featured_products: featuredProducts[0]?.count || 0,
-      out_of_stock_products: outOfStockProducts[0]?.count || 0,
-      low_stock_products: lowStockProducts[0]?.count || 0,
-      deleted_products: deletedProducts[0]?.count || 0,
-      products_this_month: currentMonthCount,
-      products_growth_rate: Math.round(growthRate * 100) / 100,
-      total_revenue: revenueData[0]?.total_revenue || 0,
-      average_product_price: Math.round((averagePriceData[0]?.average_price || 0) * 100) / 100,
+      total_products: row?.total_products ?? 0,
+      active_products: row?.active_products ?? 0,
+      inactive_products: row?.inactive_products ?? 0,
+      deleted_products: row?.deleted_products ?? 0,
+      low_stock_products: row?.low_stock_products ?? 0,
+      out_of_stock_products: row?.out_of_stock_products ?? 0,
+      featured_products: row?.featured_products ?? 0,
+      products_this_month,
+      products_growth_rate,
+      average_product_price: row?.average_product_price ?? 0,
     };
   }
 
-  async searchProducts(query: string, limit = 10): Promise<AdminProductWithStats[]> {
-    const result = await this.db
+  async searchProducts(query: string, limit = 20): Promise<AdminProductWithStats[]> {
+    if (!query?.trim()) return [];
+
+    const rows = await this.db
       .select({
         id: products.id,
         name: products.name,
@@ -667,48 +563,46 @@ export class AdminProductService {
         stock_quantity: products.stock_quantity,
         featured: products.featured,
         is_active: products.is_active,
-        slug: products.slug,
-        meta_title: products.meta_title,
-        meta_description: products.meta_description,
         created_at: products.created_at,
         updated_at: products.updated_at,
+        deleted_at: products.deleted_at,
+        deleted_by: products.deleted_by,
+
         category: {
           id: categories.id,
           name: categories.name,
-          slug: categories.slug,
           description: categories.description,
           image: categories.image,
+          slug: categories.slug,
           is_active: categories.is_active,
           created_at: categories.created_at,
           updated_at: categories.updated_at,
+          deleted_at: categories.deleted_at,
+          deleted_by: categories.deleted_by,
         },
+
+        averageRating: sql<number>`COALESCE(AVG(${reviews.rating}), 0)`,
+        reviewCount: sql<number>`COUNT(${reviews.id})`,
+        is_low_stock: sql<boolean>`CASE WHEN ${products.stock_quantity} <= 10 THEN true ELSE false END`,
       })
       .from(products)
       .leftJoin(categories, eq(products.category_id, categories.id))
-      .where(and(
-        or(
-          ilike(products.name, `%${query}%`),
-          ilike(products.description, `%${query}%`),
-          sql`${products.tags}::text ILIKE ${'%' + query + '%'}`
-        ),
-        isNull(products.deleted_at)
-      ))
-      .limit(limit)
-      .orderBy(desc(products.created_at));
+      .leftJoin(reviews, and(eq(reviews.product_id, products.id), isNull(reviews.deleted_at)))
+      .where(
+        and(
+          isNull(products.deleted_at),
+          ilike(products.name, `%${query}%`)
+        )
+      )
+      .groupBy(products.id, categories.id)
+      .orderBy(desc(products.created_at))
+      .limit(limit);
 
-    return result.map(product => ({
-      ...product,
-      average_rating: 0,
-      review_count: 0,
-      sales_count: 0,
-      total_revenue: 0,
-      days_since_created: Math.floor((Date.now() - product.created_at.getTime()) / (1000 * 60 * 60 * 24)),
-      is_low_stock: product.stock_quantity !== null && product.stock_quantity <= 10 && product.in_stock,
-    })) as AdminProductWithStats[];
+    return rows as unknown as AdminProductWithStats[];
   }
 
   async getTopSellingProducts(limit = 10): Promise<AdminProductWithStats[]> {
-    const result = await this.db
+    const rows = await this.db
       .select({
         id: products.id,
         name: products.name,
@@ -725,39 +619,38 @@ export class AdminProductService {
         stock_quantity: products.stock_quantity,
         featured: products.featured,
         is_active: products.is_active,
-        slug: products.slug,
-        meta_title: products.meta_title,
-        meta_description: products.meta_description,
         created_at: products.created_at,
         updated_at: products.updated_at,
+        deleted_at: products.deleted_at,
+        deleted_by: products.deleted_by,
+
         category: {
           id: categories.id,
           name: categories.name,
-          slug: categories.slug,
           description: categories.description,
           image: categories.image,
+          slug: categories.slug,
           is_active: categories.is_active,
           created_at: categories.created_at,
           updated_at: categories.updated_at,
+          deleted_at: categories.deleted_at,
+          deleted_by: categories.deleted_by,
         },
-        sales_count: sql<number>`COALESCE(SUM(${orderItems.quantity}), 0)`,
-        total_revenue: sql<number>`COALESCE(SUM(${orderItems.total_price}), 0)`,
+
+        salesCount: sql<number>`COALESCE(SUM(${orderItems.quantity}), 0)`,
+        averageRating: sql<number>`COALESCE(AVG(${reviews.rating}), 0)`,
+        reviewCount: sql<number>`COUNT(${reviews.id})`,
+        is_low_stock: sql<boolean>`CASE WHEN ${products.stock_quantity} <= 10 THEN true ELSE false END`,
       })
       .from(products)
+      .leftJoin(orderItems, eq(orderItems.product_id, products.id))
+      .leftJoin(reviews, and(eq(reviews.product_id, products.id), isNull(reviews.deleted_at)))
       .leftJoin(categories, eq(products.category_id, categories.id))
-      .leftJoin(orderItems, eq(products.id, orderItems.product_id))
-      .where(isNull(products.deleted_at))
+      .where(and(eq(products.is_active, true), isNull(products.deleted_at)))
       .groupBy(products.id, categories.id)
-      .orderBy(desc(sql<number>`COALESCE(SUM(${orderItems.quantity}), 0)`))
+      .orderBy(sql`COALESCE(SUM(${orderItems.quantity}), 0) DESC`)
       .limit(limit);
 
-    return result.map(product => ({
-      ...product,
-      average_rating: 0,
-      review_count: 0,
-      last_sold_date: undefined,
-      days_since_created: Math.floor((Date.now() - product.created_at.getTime()) / (1000 * 60 * 60 * 24)),
-      is_low_stock: product.stock_quantity !== null && product.stock_quantity <= 10 && product.in_stock,
-    })) as AdminProductWithStats[];
+    return rows as unknown as AdminProductWithStats[];
   }
 }

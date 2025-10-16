@@ -1,9 +1,9 @@
 import type { Context as HonoContext } from 'hono';
 import { getCookie } from 'hono/cookie';
-import { getDb } from '../db';
 import { verifyAccessToken } from '../lib/jwt';
 import { UserService } from '../services/user.service';
 import type { AuthContext } from '../types/auth';
+import { getDb } from '../db/db';
 
 // Create context for tRPC
 export const createContext = async (c: HonoContext) => {

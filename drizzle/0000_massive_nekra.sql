@@ -49,6 +49,7 @@ CREATE TABLE "order_items" (
 	"product_name" text NOT NULL,
 	"product_image" text,
 	"product_weight" text,
+	"product_snapshot" jsonb,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -60,17 +61,21 @@ CREATE TABLE "orders" (
 	"status" varchar(20) DEFAULT 'PENDING' NOT NULL,
 	"total_amount" integer NOT NULL,
 	"subtotal" integer NOT NULL,
-	"tax_amount" integer DEFAULT 0,
-	"shipping_amount" integer DEFAULT 0,
-	"discount_amount" integer DEFAULT 0,
+	"tax_amount" integer DEFAULT 0 NOT NULL,
+	"shipping_amount" integer DEFAULT 0 NOT NULL,
+	"discount_amount" integer DEFAULT 0 NOT NULL,
 	"shipping_address" jsonb NOT NULL,
+	"billing_address" jsonb,
 	"payment_method" varchar(50),
-	"payment_status" varchar(20) DEFAULT 'PENDING',
+	"payment_status" varchar(20) DEFAULT 'PENDING' NOT NULL,
 	"payment_id" varchar(255),
+	"payment_transaction_id" varchar(255),
 	"notes" text,
 	"tracking_number" varchar(100),
 	"estimated_delivery" timestamp,
 	"delivered_at" timestamp,
+	"cancelled_at" timestamp,
+	"cancellation_reason" text,
 	"created_by" uuid,
 	"updated_by" uuid,
 	"created_at" timestamp DEFAULT now() NOT NULL,
@@ -97,12 +102,12 @@ CREATE TABLE "products" (
 	"original_price" integer,
 	"category_id" uuid NOT NULL,
 	"images" jsonb DEFAULT '[]'::jsonb NOT NULL,
-	"tags" jsonb DEFAULT '[]'::jsonb,
+	"tags" jsonb,
 	"weight" varchar(50),
 	"origin" varchar(100),
-	"benefits" jsonb DEFAULT '[]'::jsonb,
+	"benefits" jsonb,
 	"in_stock" boolean DEFAULT true NOT NULL,
-	"stock_quantity" integer DEFAULT 0,
+	"stock_quantity" integer DEFAULT 0 NOT NULL,
 	"featured" boolean DEFAULT false NOT NULL,
 	"is_active" boolean DEFAULT true NOT NULL,
 	"slug" varchar(255),
@@ -173,7 +178,8 @@ CREATE TABLE "users" (
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	"deleted_at" timestamp,
 	"deleted_by" uuid,
-	CONSTRAINT "users_email_unique" UNIQUE("email")
+	CONSTRAINT "users_email_unique" UNIQUE("email"),
+	CONSTRAINT "users_google_id_unique" UNIQUE("google_id")
 );
 --> statement-breakpoint
 ALTER TABLE "bookmarks" ADD CONSTRAINT "bookmarks_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -190,53 +196,32 @@ ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_user_id_users_id_fk"
 ALTER TABLE "reviews" ADD CONSTRAINT "reviews_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "reviews" ADD CONSTRAINT "reviews_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_sessions" ADD CONSTRAINT "user_sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "bookmarks_user_idx" ON "bookmarks" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "bookmarks_product_idx" ON "bookmarks" USING btree ("product_id");--> statement-breakpoint
-CREATE INDEX "bookmarks_user_product_idx" ON "bookmarks" USING btree ("user_id","product_id");--> statement-breakpoint
-CREATE INDEX "cart_items_user_idx" ON "cart_items" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "cart_items_product_idx" ON "cart_items" USING btree ("product_id");--> statement-breakpoint
-CREATE INDEX "cart_items_user_product_idx" ON "cart_items" USING btree ("user_id","product_id");--> statement-breakpoint
-CREATE INDEX "categories_name_idx" ON "categories" USING btree ("name");--> statement-breakpoint
-CREATE INDEX "categories_slug_idx" ON "categories" USING btree ("slug");--> statement-breakpoint
-CREATE INDEX "categories_active_idx" ON "categories" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "categories_deleted_at_idx" ON "categories" USING btree ("deleted_at");--> statement-breakpoint
-CREATE INDEX "categories_created_at_idx" ON "categories" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "email_verification_tokens_user_id_idx" ON "email_verification_tokens" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "email_verification_tokens_token_hash_idx" ON "email_verification_tokens" USING btree ("token_hash");--> statement-breakpoint
-CREATE INDEX "order_items_order_idx" ON "order_items" USING btree ("order_id");--> statement-breakpoint
-CREATE INDEX "order_items_product_idx" ON "order_items" USING btree ("product_id");--> statement-breakpoint
-CREATE INDEX "orders_user_idx" ON "orders" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "orders_order_number_idx" ON "orders" USING btree ("order_number");--> statement-breakpoint
-CREATE INDEX "orders_status_idx" ON "orders" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "orders_payment_status_idx" ON "orders" USING btree ("payment_status");--> statement-breakpoint
-CREATE INDEX "orders_deleted_at_idx" ON "orders" USING btree ("deleted_at");--> statement-breakpoint
-CREATE INDEX "orders_created_at_idx" ON "orders" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "password_reset_tokens_user_id_idx" ON "password_reset_tokens" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "password_reset_tokens_token_hash_idx" ON "password_reset_tokens" USING btree ("token_hash");--> statement-breakpoint
-CREATE INDEX "products_name_idx" ON "products" USING btree ("name");--> statement-breakpoint
-CREATE INDEX "products_slug_idx" ON "products" USING btree ("slug");--> statement-breakpoint
-CREATE INDEX "products_category_idx" ON "products" USING btree ("category_id");--> statement-breakpoint
-CREATE INDEX "products_featured_idx" ON "products" USING btree ("featured");--> statement-breakpoint
-CREATE INDEX "products_active_idx" ON "products" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "products_stock_idx" ON "products" USING btree ("in_stock");--> statement-breakpoint
-CREATE INDEX "products_price_idx" ON "products" USING btree ("price");--> statement-breakpoint
-CREATE INDEX "products_deleted_at_idx" ON "products" USING btree ("deleted_at");--> statement-breakpoint
-CREATE INDEX "products_created_at_idx" ON "products" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "refresh_tokens_user_id_idx" ON "refresh_tokens" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "refresh_tokens_token_hash_idx" ON "refresh_tokens" USING btree ("token_hash");--> statement-breakpoint
-CREATE INDEX "reviews_product_idx" ON "reviews" USING btree ("product_id");--> statement-breakpoint
-CREATE INDEX "reviews_user_idx" ON "reviews" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "reviews_rating_idx" ON "reviews" USING btree ("rating");--> statement-breakpoint
-CREATE INDEX "reviews_verified_idx" ON "reviews" USING btree ("is_verified");--> statement-breakpoint
-CREATE INDEX "reviews_deleted_at_idx" ON "reviews" USING btree ("deleted_at");--> statement-breakpoint
-CREATE INDEX "reviews_created_at_idx" ON "reviews" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "user_sessions_user_id_idx" ON "user_sessions" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "user_sessions_session_token_idx" ON "user_sessions" USING btree ("session_token");--> statement-breakpoint
-CREATE INDEX "users_name_idx" ON "users" USING btree ("name");--> statement-breakpoint
-CREATE UNIQUE INDEX "users_email_idx" ON "users" USING btree ("email");--> statement-breakpoint
-CREATE INDEX "users_role_idx" ON "users" USING btree ("role");--> statement-breakpoint
-CREATE INDEX "users_deleted_at_idx" ON "users" USING btree ("deleted_at");--> statement-breakpoint
-CREATE INDEX "users_created_at_idx" ON "users" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "users_verified_idx" ON "users" USING btree ("is_verified");--> statement-breakpoint
-CREATE UNIQUE INDEX "users_google_id_idx" ON "users" USING btree ("google_id");--> statement-breakpoint
-CREATE INDEX "users_oauth_provider_idx" ON "users" USING btree ("oauth_provider");
+CREATE INDEX "idx_bookmarks_user_product" ON "bookmarks" USING btree ("user_id","product_id");--> statement-breakpoint
+CREATE INDEX "idx_cart_items_user_product" ON "cart_items" USING btree ("user_id","product_id");--> statement-breakpoint
+CREATE INDEX "idx_categories_name_active_not_deleted" ON "categories" USING btree ("name") WHERE "categories"."is_active" = true AND "categories"."deleted_at" IS NULL;--> statement-breakpoint
+CREATE INDEX "idx_email_verification_tokens_user_id" ON "email_verification_tokens" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "idx_email_verification_tokens_expires_at" ON "email_verification_tokens" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX "idx_order_items_order_id" ON "order_items" USING btree ("order_id");--> statement-breakpoint
+CREATE INDEX "idx_order_items_product_id" ON "order_items" USING btree ("product_id");--> statement-breakpoint
+CREATE INDEX "idx_orders_user_id" ON "orders" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "idx_orders_status_not_deleted" ON "orders" USING btree ("status") WHERE "orders"."deleted_at" IS NULL;--> statement-breakpoint
+CREATE INDEX "idx_orders_payment_status_not_deleted" ON "orders" USING btree ("payment_status") WHERE "orders"."deleted_at" IS NULL;--> statement-breakpoint
+CREATE INDEX "idx_orders_created_at_not_deleted" ON "orders" USING btree ("created_at") WHERE "orders"."deleted_at" IS NULL;--> statement-breakpoint
+CREATE INDEX "idx_password_reset_tokens_user_id" ON "password_reset_tokens" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "idx_password_reset_tokens_expires_at" ON "password_reset_tokens" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX "idx_products_category_id" ON "products" USING btree ("category_id");--> statement-breakpoint
+CREATE INDEX "idx_products_created_at_active_not_deleted" ON "products" USING btree ("created_at") WHERE "products"."is_active" = true AND "products"."deleted_at" IS NULL;--> statement-breakpoint
+CREATE INDEX "idx_products_price_active_not_deleted" ON "products" USING btree ("price") WHERE "products"."is_active" = true AND "products"."deleted_at" IS NULL;--> statement-breakpoint
+CREATE INDEX "idx_products_featured_created_active_not_deleted" ON "products" USING btree ("featured","created_at") WHERE "products"."is_active" = true AND "products"."deleted_at" IS NULL;--> statement-breakpoint
+CREATE INDEX "idx_products_name" ON "products" USING btree ("name");--> statement-breakpoint
+CREATE INDEX "idx_refresh_tokens_token_user" ON "refresh_tokens" USING btree ("token_hash","user_id");--> statement-breakpoint
+CREATE INDEX "idx_refresh_tokens_user_id" ON "refresh_tokens" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "idx_refresh_tokens_expires_at" ON "refresh_tokens" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX "idx_reviews_product_id_created_at" ON "reviews" USING btree ("product_id","created_at");--> statement-breakpoint
+CREATE INDEX "idx_user_sessions_user_id" ON "user_sessions" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "idx_user_sessions_expires_at" ON "user_sessions" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX "idx_users_name" ON "users" USING btree ("name");--> statement-breakpoint
+CREATE UNIQUE INDEX "idx_users_email" ON "users" USING btree ("email");--> statement-breakpoint
+CREATE INDEX "idx_users_role_not_deleted" ON "users" USING btree ("role") WHERE "users"."deleted_at" IS NULL;--> statement-breakpoint
+CREATE INDEX "idx_users_is_verified_not_deleted" ON "users" USING btree ("is_verified") WHERE "users"."deleted_at" IS NULL;--> statement-breakpoint
+CREATE INDEX "idx_users_created_at_not_deleted" ON "users" USING btree ("created_at") WHERE "users"."deleted_at" IS NULL;

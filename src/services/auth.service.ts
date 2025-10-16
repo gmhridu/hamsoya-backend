@@ -1,6 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import type { User } from '../db';
-import { getDb, refreshTokens, users } from '../db';
+import type { InferSelectModel } from 'drizzle-orm';
 import { generateOTP, hashPassword, verifyPassword } from '../lib/crypto';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../lib/jwt';
 import { RedisService } from '../lib/redis';
@@ -15,6 +14,11 @@ import type {
 } from '../types/auth';
 import { UserRole } from '../types/auth';
 import { AppError } from '../utils/error-handler';
+import { getDb } from '../db/db';
+import { refreshTokens, users } from '../db/schema';
+
+// Type definitions
+export type User = InferSelectModel<typeof users>;
 
 export class AuthService {
   private db: ReturnType<typeof getDb>;
