@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "bun run src/server.ts",
+    "start": "bun run src/server.ts",
     "dev:wrangler": "wrangler dev",
     "build": "tsc --noEmit",
     "deploy": "wrangler deploy",
