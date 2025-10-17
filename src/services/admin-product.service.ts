@@ -1,8 +1,8 @@
 
 import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte, or, sql } from 'drizzle-orm';
-import { getDb } from '../db/db';
+import { db } from '@/db/db';
 import { AppError } from '../utils/error-handler';
-import { categories, orderItems, products, reviews } from '../db/schema';
+import { categories, orderItems, products, reviews } from '@/db/schema';
 import { z } from 'zod';
 import type { InferSelectModel, InferInsertModel } from 'drizzle-orm';
 
@@ -105,10 +105,10 @@ export interface SoftDeleteResponse {
 }
 
 export class AdminProductService {
-  private db: ReturnType<typeof getDb>;
+  private db: typeof db;
 
   constructor(env?: any) {
-    this.db = getDb(env);
+    this.db = db;
   }
 
   // Helpers

@@ -22,14 +22,20 @@ NODE_ENV = "production"
 FRONTEND_URL = "https://hamsoya.vercel.app"
 BACKEND_URL = "https://hamsoya-backend-prod.ahmedriazbepari.workers.dev"
 REDIS_URL = "rediss://default:AX2EAAIjcDFhODQxOWZmYTMzMDg0ZDkxOTMyNTNiMDQ5MDk2OTJhM3AxMA@civil-tetra-32132.upstash.io:6379"
-
-[env.production.secrets]
-DATABASE_URL = "DATABASE_URL"
-JWT_ACCESS_SECRET = "JWT_ACCESS_SECRET"
-JWT_REFRESH_SECRET = "JWT_REFRESH_SECRET"
-SMTP_PASSWORD = "SMTP_PASSWORD"
-GOOGLE_CLIENT_SECRET = "GOOGLE_CLIENT_SECRET"
-SESSION_SECRET = "SESSION_SECRET"
+JWT_ACCESS_SECRET = "b01f932f9bdcaf3d"
+JWT_REFRESH_SECRET = "ac3ccfd6e2c235ff"
+SMTP_HOST = "smtp.gmail.com"
+SMTP_PORT = "465"
+SMTP_SERVICE = "gmail"
+SMTP_USER = "hasanhridoymahabub9@gmail.com"
+SMTP_PASSWORD = "zamv vndt jlpe olfn"
+GOOGLE_CLIENT_ID = "{{ secrets.GOOGLE_CLIENT_ID }}"
+GOOGLE_CLIENT_SECRET = "{{ secrets.GOOGLE_CLIENT_SECRET }}"
+GOOGLE_CALLBACK_URL = "https://hamsoya-backend-prod.ahmedriazbepari.workers.dev/api/auth/google/callback"
+SESSION_SECRET = "hamsoya-super-secret-session-key-2024-change-in-production"
+SESSION_NAME = "hamsoya_session"
+SESSION_MAX_AGE = "86400000"
+DATABASE_URL = "postgresql://neondb_owner:npg_tOvMo7u4UYqc@ep-lively-mountain-a15oq90l-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 
 # Default environment variables (use wrangler secret put for sensitive values)
 [vars]
@@ -61,12 +67,12 @@ command = "bun run build"
 # Routes for production deployment
 # Comment out routes if domain is not yet configured in Cloudflare
 # [[routes]]
-# pattern = "hamsoya.com/api/*"
-# zone_name = "hamsoya.com"
+# pattern = "hamsoya.vercel.app/api/*"
+# zone_name = "hamsoya.vercel.app"
 
 # [[routes]]
-# pattern = "hamsoya.com/trpc/*"
-# zone_name = "hamsoya.com"
+# pattern = "hamsoya.vercel.app/trpc/*"
+# zone_name = "hamsoya.vercel.app"
 
 # Limits and performance - commented out for Free plan
 # [limits]

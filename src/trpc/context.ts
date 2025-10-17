@@ -3,7 +3,7 @@ import { getCookie } from 'hono/cookie';
 import { verifyAccessToken } from '../lib/jwt';
 import { UserService } from '../services/user.service';
 import type { AuthContext } from '../types/auth';
-import { getDb } from '../db/db';
+import { db } from '@/db/db';
 
 // Create context for tRPC
 export const createContext = async (c: HonoContext) => {
@@ -11,10 +11,10 @@ export const createContext = async (c: HonoContext) => {
   const env = c.env;
 
   // Initialize database
-  const db = getDb(env);
+  const dbInstance = db;
 
   // Initialize services
-  const userService = new UserService(env);
+  const userService = new UserService();
 
   // Try to get user from token
   let authContext: AuthContext = { user: null };
@@ -58,7 +58,7 @@ export const createContext = async (c: HonoContext) => {
   }
 
   return {
-    db,
+    dbInstance,
     env,
     auth: authContext,
     userService,

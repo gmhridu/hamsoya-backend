@@ -8,8 +8,8 @@ import {
   isNull,
   sql,
 } from "drizzle-orm";
-import { getDb } from "../db/db";
-import { categories, products, reviews } from "../db/schema";
+import { db } from "@/db/db";
+import { categories, products, reviews } from "@/db/schema";
 
 export type Product = InferSelectModel<typeof products>;
 export type Review = InferSelectModel<typeof reviews>;
@@ -33,10 +33,10 @@ export interface ProductWithCategory extends Product {
 }
 
 export class ProductService {
-  private db: ReturnType<typeof getDb>;
+  private db: typeof db;
 
-  constructor(env?: any) {
-    this.db = getDb(env);
+  constructor() {
+    this.db = db;
   }
 
   // Get all products with filters

@@ -1,7 +1,7 @@
 import { and, desc, eq, ilike, sql, count, gte, lte, asc, InferSelectModel } from 'drizzle-orm';
 import { AppError } from '../utils/error-handler';
-import { getDb } from '../db/db';
-import { orderItems, orders, products, users } from '../db/schema';
+import { db } from '@/db/db';
+import { orderItems, orders, products, users } from '@/db/schema';
 
 export type Order = InferSelectModel<typeof orders>;
 export type OrderItem = InferSelectModel<typeof orderItems>;
@@ -82,10 +82,10 @@ export interface CreateOrderData {
 }
 
 export class OrderService {
-  private db: ReturnType<typeof getDb>;
+  private db: typeof db;
 
   constructor(env?: any) {
-    this.db = getDb(env);
+    this.db = db;
   }
 
   // Generate unique order number

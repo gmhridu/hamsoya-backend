@@ -1,16 +1,16 @@
 import { eq, InferSelectModel } from 'drizzle-orm';
 import type { CreateUserData, UpdateUserData, UserProfile } from '../types/user';
 import { AppError } from '../utils/error-handler';
-import { users } from '../db/schema';
-import { getDb } from '../db/db';
+import { users } from '@/db/schema';
+import { db } from '@/db/db';
 
 export type User = InferSelectModel<typeof users>
 
 export class UserService {
-  private db: ReturnType<typeof getDb>;
+  private db: typeof db;
 
-  constructor(env?: any) {
-    this.db = getDb(env);
+  constructor() {
+    this.db = db;
   }
 
   // Get user by ID

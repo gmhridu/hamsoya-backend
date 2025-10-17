@@ -7,8 +7,8 @@ import { authMiddleware, adminMiddleware } from '../../middleware/auth';
 import { AppError } from '../../utils/error-handler';
 import type { HonoEnv } from '../../types/hono';
 import { eq } from 'drizzle-orm';
-import { db } from '../../db/db';
 import { products } from '../../db/schema';
+import { db } from '@/db/db';
 
 
 const app = new Hono<HonoEnv>();
@@ -62,7 +62,7 @@ const BulkUpdateSchema = z.object({
 });
 
 const BulkDeleteSchema = z.object({
-  product_ids: z.array(z.string().uuid()),
+  product_ids: z.array(z.string()),
 });
 
 const SearchQuerySchema = z.object({

@@ -2,8 +2,8 @@ import { and, count, desc, eq, ilike, isNull, or, sql, asc, gte, lte, inArray } 
 import type { InferSelectModel } from 'drizzle-orm';
 import { z } from 'zod';
 import { AppError } from '../utils/error-handler';
-import { getDb } from '../db/db';
-import { categories, products } from '../db/schema';
+import { categories, products } from '@/db/schema';
+import { db } from '@/db/db';
 
 // Type definitions
 export type Category = InferSelectModel<typeof categories>;
@@ -89,10 +89,10 @@ export interface SoftDeleteResponse {
 }
 
 export class AdminCategoryService {
-  private db: ReturnType<typeof getDb>;
+  private db: typeof db;
 
-  constructor(env?: any) {
-    this.db = getDb(env);
+  constructor() {
+    this.db = db;
   }
 
   async getCategories(filters: AdminCategoryFilters = {}): Promise<AdminCategoryResponse> {
@@ -148,7 +148,7 @@ export class AdminCategoryService {
     }
 
     const [categoriesResult, totalResult] = await Promise.all([
-      this.db
+      db
         .select({
           id: categories.id,
           name: categories.name,
@@ -172,7 +172,7 @@ export class AdminCategoryService {
         .limit(limit)
         .offset(offset),
 
-      this.db
+      db
         .select({ count: count() })
         .from(categories)
         .where(whereConditions.length > 0 ? and(...whereConditions) : undefined),
@@ -201,7 +201,7 @@ export class AdminCategoryService {
       whereConditions.push(isNull(categories.deleted_at));
     }
 
-    const result = await this.db
+    const result = await db
       .select({
         id: categories.id,
         name: categories.name,
@@ -239,7 +239,7 @@ export class AdminCategoryService {
       created_by: categoryData.created_by,
     });
 
-    const slugExists = await this.db
+    const slugExists = await db
       .select({ id: categories.id })
       .from(categories)
       .where(and(eq(categories.slug, categoryData.slug), isNull(categories.deleted_at)))
@@ -279,7 +279,7 @@ export class AdminCategoryService {
     }
 
     if (updateData.slug && updateData.slug !== existingCategory.slug) {
-      const slugExists = await this.db
+      const slugExists = await db
         .select({ id: categories.id })
         .from(categories)
         .where(and(eq(categories.slug, updateData.slug), isNull(categories.deleted_at)))
