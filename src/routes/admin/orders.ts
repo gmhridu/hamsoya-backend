@@ -70,7 +70,7 @@ app.get('/', zValidator('query', OrderListQuerySchema), async c => {
       return c.json(errorResponse('Invalid pagination parameters'), 400 as any);
     }
 
-    const adminOrderService = new AdminOrderService(c.env);
+    const adminOrderService = new AdminOrderService();
     const result = await adminOrderService.getOrders(filters);
 
     return c.json(successResponse(result, 'Orders retrieved successfully'), 200 as any);
@@ -85,7 +85,7 @@ app.get('/', zValidator('query', OrderListQuerySchema), async c => {
 
 app.get('/stats', async c => {
   try {
-    const adminOrderService = new AdminOrderService(c.env);
+    const adminOrderService = new AdminOrderService();
     const stats = await adminOrderService.getOrderStats();
 
     return c.json(successResponse(stats, 'Order statistics retrieved successfully'), 200 as any);
@@ -102,7 +102,7 @@ app.get('/search', zValidator('query', SearchQuerySchema), async c => {
   try {
     const { q, limit } = c.req.valid('query');
 
-    const adminOrderService = new AdminOrderService(c.env);
+    const adminOrderService = new AdminOrderService();
     const orders = await adminOrderService.searchOrders(q, parseInt(limit, 10));
 
     return c.json(successResponse(orders, 'Orders search completed successfully'), 200 as any);
@@ -120,7 +120,7 @@ app.get('/:id', async c => {
     const id = c.req.param('id');
     const include_deleted = c.req.query('include_deleted') === 'true';
 
-    const adminOrderService = new AdminOrderService(c.env);
+    const adminOrderService = new AdminOrderService();
     const order = await adminOrderService.getOrderById(id, include_deleted);
 
     if (!order) {
@@ -150,7 +150,7 @@ app.put('/:id', zValidator('json', UpdateOrderSchema), async c => {
       updated_by: currentUser.id,
     };
 
-    const adminOrderService = new AdminOrderService(c.env);
+    const adminOrderService = new AdminOrderService();
     const updatedOrder = await adminOrderService.updateOrder(id, processedUpdateData);
 
     return c.json(successResponse(updatedOrder, 'Order updated successfully'), 200 as any);
@@ -168,7 +168,7 @@ app.delete('/:id', async c => {
     const id = c.req.param('id');
     const currentUser = c.get('user');
 
-    const adminOrderService = new AdminOrderService(c.env);
+    const adminOrderService = new AdminOrderService();
     const result = await adminOrderService.softDeleteOrder(id, currentUser.id);
 
     return c.json(successResponse(result, 'Order deleted successfully'), 200 as any);
@@ -185,7 +185,7 @@ app.post('/:id/undo-delete', async c => {
   try {
     const id = c.req.param('id');
 
-    const adminOrderService = new AdminOrderService(c.env);
+    const adminOrderService = new AdminOrderService();
     const restoredOrder = await adminOrderService.undoSoftDelete(id);
 
     return c.json(successResponse(restoredOrder, 'Order restored successfully'), 200 as any);
@@ -202,7 +202,7 @@ app.delete('/:id/permanent', async c => {
   try {
     const id = c.req.param('id');
 
-    const adminOrderService = new AdminOrderService(c.env);
+    const adminOrderService = new AdminOrderService();
     const result = await adminOrderService.permanentDeleteOrder(id);
 
     return c.json(successResponse(result, 'Order permanently deleted'), 200 as any);
@@ -220,7 +220,7 @@ app.put('/bulk-update-status', zValidator('json', BulkUpdateStatusSchema), async
     const { order_ids, status } = c.req.valid('json');
     const currentUser = c.get('user');
 
-    const adminOrderService = new AdminOrderService(c.env);
+    const adminOrderService = new AdminOrderService();
     const result = await adminOrderService.bulkUpdateOrderStatus(order_ids, status, currentUser.id);
 
     return c.json(successResponse(result, 'Orders status updated successfully'), 200 as any);

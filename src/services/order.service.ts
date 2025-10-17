@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, sql, count, gte, lte, asc, InferSelectModel } from 'drizzle-orm';
+import { and, desc, eq, sql, count, gte, lte, asc, InferSelectModel } from 'drizzle-orm';
 import { AppError } from '../utils/error-handler';
 
 import { orderItems, orders, products, users } from '@/db/schema';
@@ -82,10 +82,10 @@ export interface CreateOrderData {
 }
 
 export class OrderService {
-  private db: typeof db;
-
-  constructor(env?: any) {
-    
+  private get db() {
+    // Lazy import to avoid initialization at module load time
+    const { db } = require('@/db/db');
+    return db;
   }
 
   // Generate unique order number

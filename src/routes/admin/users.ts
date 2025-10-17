@@ -78,7 +78,7 @@ app.get('/', zValidator('query', UserListQuerySchema), async c => {
       return c.json(errorResponse('Invalid pagination parameters'), 400);
     }
 
-    const adminUserService = new AdminUserService(c.env);
+    const adminUserService = new AdminUserService();
     const result = await adminUserService.getUsers(filters);
 
     return c.json(successResponse(result, 'Users retrieved successfully'), 200 as any);
@@ -93,7 +93,7 @@ app.get('/', zValidator('query', UserListQuerySchema), async c => {
 
 app.get('/stats', async c => {
   try {
-    const adminUserService = new AdminUserService(c.env);
+    const adminUserService = new AdminUserService();
     const stats = await adminUserService.getUserStats();
 
     return c.json(successResponse(stats, 'User statistics retrieved successfully'), 200 as any);
@@ -110,7 +110,7 @@ app.get('/search', zValidator('query', SearchQuerySchema), async c => {
   try {
     const { q, limit } = c.req.valid('query');
 
-    const adminUserService = new AdminUserService(c.env);
+    const adminUserService = new AdminUserService();
     const users = await adminUserService.searchUsers(q, parseInt(limit, 10));
 
     return c.json(successResponse(users, 'Users search completed successfully'), 200 as any);
@@ -128,7 +128,7 @@ app.post('/', zValidator('json', CreateUserSchema), async c => {
     const userData = c.req.valid('json');
     const currentUser = c.get('user');
 
-    const adminUserService = new AdminUserService(c.env);
+    const adminUserService = new AdminUserService();
     const newUser = await adminUserService.createUser({
       ...userData,
       created_by: currentUser.id,
@@ -149,7 +149,7 @@ app.get('/:id', async c => {
     const id = c.req.param('id');
     const include_deleted = c.req.query('include_deleted') === 'true';
 
-    const adminUserService = new AdminUserService(c.env);
+    const adminUserService = new AdminUserService();
     const user = await adminUserService.getUserById(id, include_deleted);
 
     if (!user) {
@@ -172,7 +172,7 @@ app.put('/:id', zValidator('json', UpdateUserSchema), async c => {
     const updateData = c.req.valid('json');
     const currentUser = c.get('user');
 
-    const adminUserService = new AdminUserService(c.env);
+    const adminUserService = new AdminUserService();
     const updatedUser = await adminUserService.updateUser(id, {
       ...updateData,
       updated_by: currentUser.id,
@@ -197,7 +197,7 @@ app.delete('/:id', async c => {
       return c.json(errorResponse('Cannot delete your own account'), 400 as any);
     }
 
-    const adminUserService = new AdminUserService(c.env);
+    const adminUserService = new AdminUserService();
     const result = await adminUserService.softDeleteUser(id, currentUser.id);
 
     return c.json(successResponse(result, 'User deleted successfully'), 200 as any);
@@ -214,7 +214,7 @@ app.post('/:id/undo-delete', async c => {
   try {
     const id = c.req.param('id');
 
-    const adminUserService = new AdminUserService(c.env);
+    const adminUserService = new AdminUserService();
     const restoredUser = await adminUserService.undoSoftDelete(id);
 
     return c.json(successResponse(restoredUser, 'User restored successfully'), 200 as any);
@@ -236,7 +236,7 @@ app.delete('/:id/permanent', async c => {
       return c.json(errorResponse('Cannot permanently delete your own account'), 400);
     }
 
-    const adminUserService = new AdminUserService(c.env);
+    const adminUserService = new AdminUserService();
     const result = await adminUserService.permanentDeleteUser(id);
 
     return c.json(successResponse(result, 'User permanently deleted'), 200 as any);
@@ -258,7 +258,7 @@ app.put('/bulk-update', zValidator('json', BulkUpdateSchema), async c => {
       return c.json(errorResponse('Cannot change your own admin role'), 400);
     }
 
-    const adminUserService = new AdminUserService(c.env);
+    const adminUserService = new AdminUserService();
     const result = await adminUserService.bulkUpdateUsers(user_ids, {
       ...update_data,
       updated_by: currentUser.id,
@@ -283,7 +283,7 @@ app.delete('/bulk-delete', zValidator('json', BulkDeleteSchema), async c => {
       return c.json(errorResponse('Cannot delete your own account'), 400);
     }
 
-    const adminUserService = new AdminUserService(c.env);
+    const adminUserService = new AdminUserService();
     const result = await adminUserService.bulkSoftDeleteUsers(user_ids, currentUser.id);
 
     return c.json(successResponse(result, 'Users deleted successfully'), 200 as any);

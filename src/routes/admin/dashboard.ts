@@ -68,10 +68,10 @@ interface DashboardStats {
 
 app.get('/stats', async c => {
   try {
-    const adminUserService = new AdminUserService(c.env);
-    const adminProductService = new AdminProductService(c.env);
+    const adminUserService = new AdminUserService();
+    const adminProductService = new AdminProductService();
     const adminCategoryService = new AdminCategoryService();
-    const adminOrderService = new AdminOrderService(c.env);
+    const adminOrderService = new AdminOrderService();
 
     const [userStats, productStats, categoryStats, orderStats] = await Promise.all([
       adminUserService.getUserStats(),
@@ -148,9 +148,9 @@ app.get('/recent-activity', async c => {
   try {
     const limit = parseInt(c.req.query('limit') || '10', 10);
 
-    const adminUserService = new AdminUserService(c.env);
-    const adminProductService = new AdminProductService(c.env);
-    const adminOrderService = new AdminOrderService(c.env);
+    const adminUserService = new AdminUserService();
+    const adminProductService = new AdminProductService();
+    const adminOrderService = new AdminOrderService();
 
     const [recentUsers, recentProducts, recentOrders] = await Promise.all([
       adminUserService.getUsers({
@@ -188,8 +188,8 @@ app.get('/recent-activity', async c => {
 
 app.get('/alerts', async c => {
   try {
-    const adminProductService = new AdminProductService(c.env);
-    const adminOrderService = new AdminOrderService(c.env);
+    const adminProductService = new AdminProductService();
+    const adminOrderService = new AdminOrderService();
 
     const [lowStockProducts, pendingOrders] = await Promise.all([
       adminProductService.getProducts({
@@ -224,7 +224,7 @@ app.get('/top-performers', async c => {
   try {
     const limit = parseInt(c.req.query('limit') || '5', 10);
 
-    const adminProductService = new AdminProductService(c.env);
+    const adminProductService = new AdminProductService();
     const topSellingProducts = await adminProductService.getTopSellingProducts(limit);
 
     const topPerformers = {

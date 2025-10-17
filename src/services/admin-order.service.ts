@@ -103,10 +103,10 @@ export interface SoftDeleteResponse {
 }
 
 export class AdminOrderService {
-  private db: typeof db;
-
-  constructor(env?: any) {
-    
+  private get db() {
+    // Lazy import to avoid initialization at module load time
+    const { db } = require('@/db/db');
+    return db;
   }
 
   async getOrders(filters: AdminOrderFilters = {}): Promise<AdminOrderResponse> {

@@ -3,6 +3,7 @@ import type { InferSelectModel } from 'drizzle-orm';
 import { z } from 'zod';
 import { AppError } from '../utils/error-handler';
 import { categories, products } from '@/db/schema';
+import { db } from '@/db/db';
 
 
 // Type definitions
@@ -89,10 +90,10 @@ export interface SoftDeleteResponse {
 }
 
 export class AdminCategoryService {
-  private db: typeof db;
-
-  constructor() {
-    
+  private get db() {
+    // Lazy import to avoid initialization at module load time
+    const { db } = require('@/db/db');
+    return db;
   }
 
   async getCategories(filters: AdminCategoryFilters = {}): Promise<AdminCategoryResponse> {
@@ -148,7 +149,7 @@ export class AdminCategoryService {
     }
 
     const [categoriesResult, totalResult] = await Promise.all([
-      db
+      this.db
         .select({
           id: categories.id,
           name: categories.name,
@@ -172,7 +173,7 @@ export class AdminCategoryService {
         .limit(limit)
         .offset(offset),
 
-      db
+      this.db
         .select({ count: count() })
         .from(categories)
         .where(whereConditions.length > 0 ? and(...whereConditions) : undefined),
@@ -201,7 +202,7 @@ export class AdminCategoryService {
       whereConditions.push(isNull(categories.deleted_at));
     }
 
-    const result = await db
+    const result = await this.db
       .select({
         id: categories.id,
         name: categories.name,
@@ -239,7 +240,7 @@ export class AdminCategoryService {
       created_by: categoryData.created_by,
     });
 
-    const slugExists = await db
+    const slugExists = await this.db
       .select({ id: categories.id })
       .from(categories)
       .where(and(eq(categories.slug, categoryData.slug), isNull(categories.deleted_at)))
@@ -279,7 +280,7 @@ export class AdminCategoryService {
     }
 
     if (updateData.slug && updateData.slug !== existingCategory.slug) {
-      const slugExists = await db
+      const slugExists = await this.db
         .select({ id: categories.id })
         .from(categories)
         .where(and(eq(categories.slug, updateData.slug), isNull(categories.deleted_at)))
