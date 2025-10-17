@@ -1,7 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { generateAccessToken, generateRefreshToken } from '../lib/jwt';
 import { AppError } from '../utils/error-handler';
-import { db } from '@/db/db';
 import { users } from '@/db/schema';
 import { User } from './auth.service';
 
@@ -23,12 +22,16 @@ export interface GoogleTokens {
 }
 
 export class GoogleAuthService {
-  private db: typeof db;
   private env: any;
 
   constructor(env: any) {
     this.env = env;
-    this.db = db;
+  }
+
+  private get db() {
+    // Lazy import to avoid initialization at module load time
+    const { db } = require('@/db/db');
+    return db;
   }
 
   async findOrCreateUser(

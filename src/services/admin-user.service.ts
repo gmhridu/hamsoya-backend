@@ -3,7 +3,6 @@ import type { InferSelectModel } from 'drizzle-orm';
 import { z } from 'zod';
 import { AppError } from '../utils/error-handler';
 import { hashPassword } from '../lib/crypto';
-import { db } from '@/db/db';
 import { orders, users } from '@/db/schema';
 
 // Type definitions
@@ -98,10 +97,10 @@ export interface SoftDeleteResponse {
 }
 
 export class AdminUserService {
-  private db: typeof db;
-
-  constructor(env?: any) {
-    this.db = db;
+  private get db() {
+    // Lazy import to avoid initialization at module load time
+    const { db } = require('@/db/db');
+    return db;
   }
 
   async getUsers(filters: AdminUserFilters = {}): Promise<AdminUserResponse> {

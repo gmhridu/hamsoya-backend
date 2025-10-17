@@ -8,7 +8,7 @@ import { AppError } from '../../utils/error-handler';
 import type { HonoEnv } from '../../types/hono';
 import { eq } from 'drizzle-orm';
 import { products } from '../../db/schema';
-import { db } from '@/db/db';
+
 
 
 const app = new Hono<HonoEnv>();
@@ -106,7 +106,7 @@ app.get('/', zValidator('query', ProductListQuerySchema), async c => {
       return c.json(errorResponse('Invalid pagination parameters'), 400 as any);
     }
 
-    const adminProductService = new AdminProductService(c.env);
+    const adminProductService = new AdminProductService();
     const result = await adminProductService.getProducts(filters);
 
     return c.json(successResponse(result, 'Products retrieved successfully'), 200 as any);
@@ -121,7 +121,7 @@ app.get('/', zValidator('query', ProductListQuerySchema), async c => {
 
 app.get('/stats', async c => {
   try {
-    const adminProductService = new AdminProductService(c.env);
+    const adminProductService = new AdminProductService();
     const stats = await adminProductService.getProductStats();
 
     return c.json(successResponse(stats, 'Product statistics retrieved successfully'), 200 as any);
@@ -138,7 +138,7 @@ app.get('/search', zValidator('query', SearchQuerySchema), async c => {
   try {
     const { q, limit } = c.req.valid('query');
 
-    const adminProductService = new AdminProductService(c.env);
+    const adminProductService = new AdminProductService();
     const products = await adminProductService.searchProducts(q, parseInt(limit, 10));
 
     return c.json(successResponse(products, 'Products search completed successfully'), 200 as any);
@@ -155,7 +155,7 @@ app.get('/top-selling', async c => {
   try {
     const limit = parseInt(c.req.query('limit') || '10', 10);
 
-    const adminProductService = new AdminProductService(c.env);
+    const adminProductService = new AdminProductService();
     const topProducts = await adminProductService.getTopSellingProducts(limit);
 
     return c.json(successResponse(topProducts, 'Top selling products retrieved successfully'), 200 as any);
@@ -173,7 +173,7 @@ app.post('/', zValidator('json', CreateProductSchema), async c => {
     const productData = c.req.valid('json');
     const currentUser = c.get('user');
 
-    const adminProductService = new AdminProductService(c.env);
+    const adminProductService = new AdminProductService();
     const newProduct = await adminProductService.createProduct({
       ...productData,
       created_by: currentUser.id,
@@ -194,7 +194,7 @@ app.get('/:id', async c => {
     const id = c.req.param('id');
     const include_deleted = c.req.query('include_deleted') === 'true';
 
-    const adminProductService = new AdminProductService(c.env);
+    const adminProductService = new AdminProductService();
     const product = await adminProductService.getProductById(id);
 
     if (!product) {
@@ -217,7 +217,7 @@ app.put('/:id', zValidator('json', UpdateProductSchema), async c => {
     const updateData = c.req.valid('json');
     const currentUser = c.get('user');
 
-    const adminProductService = new AdminProductService(c.env);
+    const adminProductService = new AdminProductService();
     const updatedProduct = await adminProductService.updateProduct(id, {
       ...updateData,
       updated_by: currentUser.id,
@@ -239,6 +239,7 @@ app.put('/:id/featured', zValidator('json', FeaturedToggleSchema), async c => {
     const id = c.req.param('id');
     const { featured } = c.req.valid('json');
 
+    const { db } = require('@/db/db');
     const [updatedProduct] = await db
       .update(products)
       .set({
@@ -274,6 +275,7 @@ app.put('/:id/stock', zValidator('json', StockUpdateSchema), async c => {
       updateData.in_stock = in_stock;
     }
 
+    const { db } = require('@/db/db');
     const [updatedProduct] = await db
       .update(products)
       .set(updateData)
@@ -296,7 +298,7 @@ app.delete('/:id', async c => {
     const id = c.req.param('id');
     const currentUser = c.get('user');
 
-    const adminProductService = new AdminProductService(c.env);
+    const adminProductService = new AdminProductService();
     const result = await adminProductService.softDeleteProduct(id, currentUser.id);
 
     return c.json(successResponse(result, 'Product deleted successfully'), 200 as any);
@@ -313,7 +315,7 @@ app.post('/:id/undo-delete', async c => {
   try {
     const id = c.req.param('id');
 
-    const adminProductService = new AdminProductService(c.env);
+    const adminProductService = new AdminProductService();
     const restoredProduct = await adminProductService.undoSoftDelete(id);
 
     return c.json(successResponse(restoredProduct, 'Product restored successfully'), 200 as any);
@@ -330,7 +332,7 @@ app.delete('/:id/permanent', async c => {
   try {
     const id = c.req.param('id');
 
-    const adminProductService = new AdminProductService(c.env);
+    const adminProductService = new AdminProductService();
     const result = await adminProductService.permanentDeleteProduct(id);
 
     return c.json(successResponse(result, 'Product permanently deleted'), 200 as any);
@@ -348,7 +350,7 @@ app.put('/bulk-update', zValidator('json', BulkUpdateSchema), async c => {
     const { product_ids, update_data } = c.req.valid('json');
     const currentUser = c.get('user');
 
-    const adminProductService = new AdminProductService(c.env);
+    const adminProductService = new AdminProductService();
     const result = await adminProductService.bulkUpdateProducts(product_ids, {
       ...update_data,
       updated_by: currentUser.id,
@@ -369,7 +371,7 @@ app.delete('/bulk-delete', zValidator('json', BulkDeleteSchema), async c => {
     const { product_ids } = c.req.valid('json');
     const currentUser = c.get('user');
 
-    const adminProductService = new AdminProductService(c.env);
+    const adminProductService = new AdminProductService();
     const result = await adminProductService.bulkSoftDeleteProducts(product_ids, currentUser.id);
 
     return c.json(successResponse(result, 'Products deleted successfully'), 200 as any);

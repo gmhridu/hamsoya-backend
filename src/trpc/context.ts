@@ -3,7 +3,7 @@ import { getCookie } from 'hono/cookie';
 import { verifyAccessToken } from '../lib/jwt';
 import { UserService } from '../services/user.service';
 import type { AuthContext } from '../types/auth';
-import { db } from '@/db/db';
+
 
 // Create context for tRPC
 export const createContext = async (c: HonoContext) => {
@@ -11,6 +11,7 @@ export const createContext = async (c: HonoContext) => {
   const env = c.env;
 
   // Initialize database
+  const { db } = require('@/db/db');
   const dbInstance = db;
 
   // Initialize services

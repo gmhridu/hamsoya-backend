@@ -2,7 +2,7 @@ import { and, count, desc, eq, ilike, isNull, or, sql, asc, gte, lte, inArray } 
 import type { InferSelectModel } from 'drizzle-orm';
 import { z } from 'zod';
 import { AppError } from '../utils/error-handler';
-import { db } from '@/db/db';
+
 import { orderItems, orders, products, users } from '@/db/schema';
 
 // Type definitions
@@ -106,7 +106,7 @@ export class AdminOrderService {
   private db: typeof db;
 
   constructor(env?: any) {
-    this.db = db;
+    
   }
 
   async getOrders(filters: AdminOrderFilters = {}): Promise<AdminOrderResponse> {

@@ -3,7 +3,7 @@ import type { InferSelectModel } from 'drizzle-orm';
 import { z } from 'zod';
 import { AppError } from '../utils/error-handler';
 import { categories, products } from '@/db/schema';
-import { db } from '@/db/db';
+
 
 // Type definitions
 export type Category = InferSelectModel<typeof categories>;
@@ -92,7 +92,7 @@ export class AdminCategoryService {
   private db: typeof db;
 
   constructor() {
-    this.db = db;
+    
   }
 
   async getCategories(filters: AdminCategoryFilters = {}): Promise<AdminCategoryResponse> {

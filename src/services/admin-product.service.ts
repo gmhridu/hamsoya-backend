@@ -1,6 +1,6 @@
 
 import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte, or, sql } from 'drizzle-orm';
-import { db } from '@/db/db';
+
 import { AppError } from '../utils/error-handler';
 import { categories, orderItems, products, reviews } from '@/db/schema';
 import { z } from 'zod';
@@ -105,10 +105,10 @@ export interface SoftDeleteResponse {
 }
 
 export class AdminProductService {
-  private db: typeof db;
-
-  constructor(env?: any) {
-    this.db = db;
+  private get db() {
+    // Lazy import to avoid initialization at module load time
+    const { db } = require('@/db/db');
+    return db;
   }
 
   // Helpers

@@ -14,21 +14,24 @@ import type {
 } from '../types/auth';
 import { UserRole } from '../types/auth';
 import { AppError } from '../utils/error-handler';
-import { db } from '@/db/db';
 import { refreshTokens, users } from '@/db/schema';
 
 // Type definitions
 export type User = InferSelectModel<typeof users>;
 
 export class AuthService {
-  private db: typeof db;
   private redis: RedisService;
   private env: any;
 
   constructor(env?: any) {
     this.env = env;
-    this.db = db;
     this.redis = new RedisService(env?.REDIS_URL);
+  }
+
+  private get db() {
+    // Lazy import to avoid initialization at module load time
+    const { db } = require('@/db/db');
+    return db;
   }
 
   // Register new user (Step 1: Store registration data and send OTP)
