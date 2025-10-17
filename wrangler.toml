@@ -23,6 +23,14 @@ FRONTEND_URL = "https://hamsoya.vercel.app"
 BACKEND_URL = "https://hamsoya-backend-prod.ahmedriazbepari.workers.dev"
 REDIS_URL = "rediss://default:AX2EAAIjcDFhODQxOWZmYTMzMDg0ZDkxOTMyNTNiMDQ5MDk2OTJhM3AxMA@civil-tetra-32132.upstash.io:6379"
 
+[env.production.secrets]
+DATABASE_URL = "DATABASE_URL"
+JWT_ACCESS_SECRET = "JWT_ACCESS_SECRET"
+JWT_REFRESH_SECRET = "JWT_REFRESH_SECRET"
+SMTP_PASSWORD = "SMTP_PASSWORD"
+GOOGLE_CLIENT_SECRET = "GOOGLE_CLIENT_SECRET"
+SESSION_SECRET = "SESSION_SECRET"
+
 # Default environment variables (use wrangler secret put for sensitive values)
 [vars]
 NODE_ENV = "development"
