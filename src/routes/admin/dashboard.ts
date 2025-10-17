@@ -70,7 +70,7 @@ app.get('/stats', async c => {
   try {
     const adminUserService = new AdminUserService(c.env);
     const adminProductService = new AdminProductService(c.env);
-    const adminCategoryService = new AdminCategoryService(c.env);
+    const adminCategoryService = new AdminCategoryService();
     const adminOrderService = new AdminOrderService(c.env);
 
     const [userStats, productStats, categoryStats, orderStats] = await Promise.all([

@@ -73,7 +73,7 @@ app.get('/', zValidator('query', CategoryListQuerySchema), async c => {
       return c.json(errorResponse('Invalid pagination parameters'), 400 as any);
     }
 
-    const adminCategoryService = new AdminCategoryService(c.env);
+    const adminCategoryService = new AdminCategoryService();
     const result = await adminCategoryService.getCategories(filters);
 
     return c.json(successResponse(result, 'Categories retrieved successfully'), 200 as any);
@@ -88,7 +88,7 @@ app.get('/', zValidator('query', CategoryListQuerySchema), async c => {
 
 app.get('/stats', async c => {
   try {
-    const adminCategoryService = new AdminCategoryService(c.env);
+    const adminCategoryService = new AdminCategoryService();
     const stats = await adminCategoryService.getCategoryStats();
 
     return c.json(successResponse(stats, 'Category statistics retrieved successfully'), 200 as any);
@@ -105,7 +105,7 @@ app.get('/search', zValidator('query', SearchQuerySchema), async c => {
   try {
     const { q, limit } = c.req.valid('query');
 
-    const adminCategoryService = new AdminCategoryService(c.env);
+    const adminCategoryService = new AdminCategoryService();
     const categories = await adminCategoryService.searchCategories(q, parseInt(limit, 10));
 
     return c.json(successResponse(categories, 'Categories search completed successfully'), 200 as any);
@@ -123,7 +123,7 @@ app.post('/', zValidator('json', CreateCategorySchema), async c => {
     const categoryData = c.req.valid('json');
     const currentUser = c.get('user');
 
-    const adminCategoryService = new AdminCategoryService(c.env);
+    const adminCategoryService = new AdminCategoryService();
     const newCategory = await adminCategoryService.createCategory({
       ...categoryData,
       created_by: currentUser.id,
@@ -144,7 +144,7 @@ app.get('/:id', async c => {
     const id = c.req.param('id');
     const include_deleted = c.req.query('include_deleted') === 'true';
 
-    const adminCategoryService = new AdminCategoryService(c.env);
+    const adminCategoryService = new AdminCategoryService();
     const category = await adminCategoryService.getCategoryById(id, include_deleted);
 
     if (!category) {
@@ -167,7 +167,7 @@ app.put('/:id', zValidator('json', UpdateCategorySchema), async c => {
     const updateData = c.req.valid('json');
     const currentUser = c.get('user');
 
-    const adminCategoryService = new AdminCategoryService(c.env);
+    const adminCategoryService = new AdminCategoryService();
     const updatedCategory = await adminCategoryService.updateCategory(id, {
       ...updateData,
       updated_by: currentUser.id,
@@ -188,7 +188,7 @@ app.delete('/:id', async c => {
     const id = c.req.param('id');
     const currentUser = c.get('user');
 
-    const adminCategoryService = new AdminCategoryService(c.env);
+    const adminCategoryService = new AdminCategoryService();
     const result = await adminCategoryService.softDeleteCategory(id, currentUser.id);
 
     return c.json(successResponse(result, 'Category deleted successfully'), 200 as any);
@@ -205,7 +205,7 @@ app.post('/:id/undo-delete', async c => {
   try {
     const id = c.req.param('id');
 
-    const adminCategoryService = new AdminCategoryService(c.env);
+    const adminCategoryService = new AdminCategoryService();
     const restoredCategory = await adminCategoryService.undoSoftDelete(id);
 
     return c.json(successResponse(restoredCategory, 'Category restored successfully'), 200 as any);
@@ -222,7 +222,7 @@ app.delete('/:id/permanent', async c => {
   try {
     const id = c.req.param('id');
 
-    const adminCategoryService = new AdminCategoryService(c.env);
+    const adminCategoryService = new AdminCategoryService();
     const result = await adminCategoryService.permanentDeleteCategory(id);
 
     return c.json(successResponse(result, 'Category permanently deleted'), 200 as any);
@@ -240,7 +240,7 @@ app.put('/bulk-update', zValidator('json', BulkUpdateSchema), async c => {
     const { category_ids, update_data } = c.req.valid('json');
     const currentUser = c.get('user');
 
-    const adminCategoryService = new AdminCategoryService(c.env);
+    const adminCategoryService = new AdminCategoryService();
     const result = await adminCategoryService.bulkUpdateCategories(category_ids, {
       ...update_data,
       updated_by: currentUser.id,
@@ -261,7 +261,7 @@ app.delete('/bulk-delete', zValidator('json', BulkDeleteSchema), async c => {
     const { category_ids } = c.req.valid('json');
     const currentUser = c.get('user');
 
-    const adminCategoryService = new AdminCategoryService(c.env);
+    const adminCategoryService = new AdminCategoryService();
     const result = await adminCategoryService.bulkSoftDeleteCategories(category_ids, currentUser.id);
 
     return c.json(successResponse(result, 'Categories deleted successfully'), 200 as any);

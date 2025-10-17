@@ -195,14 +195,14 @@ const productRouter = router({
         offset: z.number().int().min(0).optional(),
       })
     )
-    .query(async ({ input, ctx }) => {
-      const productService = new ProductService(ctx.env);
+    .query(async ({ input }) => {
+      const productService = new ProductService();
       return await productService.getProducts(input);
     }),
 
   // Get product by ID
-  byId: publicProcedure.input(z.object({ id: z.string().uuid() })).query(async ({ input, ctx }) => {
-    const productService = new ProductService(ctx.env);
+  byId: publicProcedure.input(z.object({ id: z.string() })).query(async ({ input, ctx }) => {
+    const productService = new ProductService();
     const product = await productService.getProductById(input.id);
     if (!product) {
       throw new TRPCError({
@@ -216,8 +216,8 @@ const productRouter = router({
   // Get featured products
   featured: publicProcedure
     .input(z.object({ limit: z.number().int().positive().max(50).optional() }))
-    .query(async ({ input, ctx }) => {
-      const productService = new ProductService(ctx.env);
+    .query(async ({ input }) => {
+      const productService = new ProductService();
       return await productService.getFeaturedProducts(input.limit);
     }),
 
@@ -229,8 +229,8 @@ const productRouter = router({
         limit: z.number().int().positive().max(100).optional(),
       })
     )
-    .query(async ({ input, ctx }) => {
-      const productService = new ProductService(ctx.env);
+    .query(async ({ input }) => {
+      const productService = new ProductService();
       return await productService.getProductsByCategory(input.categorySlug, input.limit);
     }),
 
@@ -242,16 +242,16 @@ const productRouter = router({
         limit: z.number().int().positive().max(100).optional(),
       })
     )
-    .query(async ({ input, ctx }) => {
-      const productService = new ProductService(ctx.env);
+    .query(async ({ input }) => {
+      const productService = new ProductService();
       return await productService.searchProducts(input.query, input.limit);
     }),
 
   // Get product reviews
   reviews: publicProcedure
-    .input(z.object({ productId: z.string().uuid() }))
+    .input(z.object({ productId: z.string() }))
     .query(async ({ input, ctx }) => {
-      const productService = new ProductService(ctx.env);
+      const productService = new ProductService();
       return await productService.getProductReviews(input.productId);
     }),
 });
@@ -259,14 +259,14 @@ const productRouter = router({
 // Category router
 const categoryRouter = router({
   // Get all categories
-  list: publicProcedure.query(async ({ ctx }) => {
-    const productService = new ProductService(ctx.env);
+  list: publicProcedure.query(async () => {
+    const productService = new ProductService();
     return await productService.getCategories();
   }),
 
   // Get category by slug
   bySlug: publicProcedure.input(z.object({ slug: z.string() })).query(async ({ input, ctx }) => {
-    const productService = new ProductService(ctx.env);
+    const productService = new ProductService();
     const category = await productService.getCategoryBySlug(input.slug);
     if (!category) {
       throw new TRPCError({

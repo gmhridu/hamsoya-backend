@@ -25,7 +25,7 @@ export const authMiddleware = async (c: Context, next: Next) => {
     const oauthUser = getUserFromCookie(c);
     if (oauthUser && oauthUser.id) {
       // Verify the OAuth user still exists and is valid
-      const userService = new UserService(c.env);
+      const userService = new UserService();
       const user = await userService.getUserById(oauthUser.id);
 
       if (user && user.is_verified) {
@@ -64,7 +64,7 @@ export const authMiddleware = async (c: Context, next: Next) => {
     const payload = verifyAccessToken(token, c.env);
 
     // Get user details
-    const userService = new UserService(c.env);
+    const userService = new UserService();
     const user = await userService.getUserById(payload.userId);
 
     if (!user) {
@@ -107,7 +107,7 @@ export const authMiddleware = async (c: Context, next: Next) => {
 
           // Verify the new access token and continue
           const payload = verifyAccessToken(tokens.accessToken, c.env);
-          const userService = new UserService(c.env);
+          const userService = new UserService();
           const user = await userService.getUserById(payload.userId);
 
           if (user) {
@@ -162,7 +162,7 @@ export const optionalAuthMiddleware = async (c: Context, next: Next) => {
     const oauthUser = getUserFromCookie(c);
     if (oauthUser && oauthUser.id) {
       // Verify the OAuth user still exists and is valid
-      const userService = new UserService(c.env);
+      const userService = new UserService();
       const user = await userService.getUserById(oauthUser.id);
 
       if (user && user.is_verified) {
@@ -198,7 +198,7 @@ export const optionalAuthMiddleware = async (c: Context, next: Next) => {
       const payload = verifyAccessToken(token, c.env);
 
       // Get user details
-      const userService = new UserService(c.env);
+      const userService = new UserService();
       const user = await userService.getUserById(payload.userId);
 
       if (user && user.is_verified) {
