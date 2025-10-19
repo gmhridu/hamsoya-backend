@@ -62,6 +62,17 @@ app.get('/', async (c) => {
     // Log OAuth initiation
     logOAuthEvent('oauth_initiated', { redirectTo, clientIP }, clientIP);
 
+    // Validate required environment variables
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !process.env.GOOGLE_CALLBACK_URL) {
+      console.error('[GOOGLE-OAUTH] Missing required environment variables:', {
+        hasClientId: !!process.env.GOOGLE_CLIENT_ID,
+        hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+        hasCallbackUrl: !!process.env.GOOGLE_CALLBACK_URL,
+        callbackUrl: process.env.GOOGLE_CALLBACK_URL,
+      });
+      return c.json(errorResponse('Google OAuth is not properly configured'), 500 as any);
+    }
+
     // Redirect to Google OAuth with secure state parameter
     const googleAuthUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     googleAuthUrl.searchParams.set('client_id', process.env.GOOGLE_CLIENT_ID!);
@@ -71,6 +82,12 @@ app.get('/', async (c) => {
     googleAuthUrl.searchParams.set('state', encodedState);
     googleAuthUrl.searchParams.set('access_type', 'offline');
     googleAuthUrl.searchParams.set('prompt', 'consent');
+
+    console.log(`[GOOGLE-OAUTH] Redirecting to Google OAuth:`, {
+      clientId: process.env.GOOGLE_CLIENT_ID!.substring(0, 10) + '...',
+      callbackUrl: process.env.GOOGLE_CALLBACK_URL,
+      state: encodedState.substring(0, 20) + '...',
+    });
 
     return c.redirect(googleAuthUrl.toString());
   } catch (error) {
@@ -116,6 +133,7 @@ app.get('/callback', async (c) => {
     }
 
     // Exchange code for tokens
+    console.log(`[GOOGLE-OAUTH] Exchanging code for tokens...`);
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: {
@@ -131,10 +149,17 @@ app.get('/callback', async (c) => {
     });
 
     if (!tokenResponse.ok) {
-      throw new Error('Failed to exchange code for tokens');
+      const errorText = await tokenResponse.text();
+      console.error(`[GOOGLE-OAUTH] Token exchange failed:`, {
+        status: tokenResponse.status,
+        statusText: tokenResponse.statusText,
+        response: errorText,
+      });
+      throw new Error(`Failed to exchange code for tokens: ${tokenResponse.status} ${tokenResponse.statusText}`);
     }
 
     const tokens = await tokenResponse.json();
+    console.log(`[GOOGLE-OAUTH] Tokens received successfully`);
 
     // Get user profile from Google
     const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
@@ -168,64 +193,40 @@ app.get('/callback', async (c) => {
       token_type: (tokens as any).token_type || 'Bearer',
     };
 
+    console.log(`[GOOGLE-OAUTH] Creating/finding user for Google ID: ${userProfile.id}, email: ${userProfile.email}`);
     const result = await googleAuthService.findOrCreateUser(userProfile, userTokens);
 
-    // Set secure cookies
-    const isProduction = (c.env as any)?.NODE_ENV === 'production';
-
-    setCookie(c, 'accessToken', result.accessToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'Strict',
-      maxAge: 15 * 60, // 15 minutes
-      path: '/',
-    });
-
-    setCookie(c, 'refreshToken', result.refreshToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'Strict',
-      maxAge: 30 * 24 * 60 * 60, // 30 days
-      path: '/',
-    });
-
-    // Set user info cookie for client-side access (non-sensitive data only)
-    setCookie(c, 'userInfo', JSON.stringify({
-      id: result.user.id,
+    console.log(`[GOOGLE-OAUTH] User processed successfully:`, {
+      userId: result.user.id,
       email: result.user.email,
-      name: result.user.name,
       role: result.user.role,
-      profile_image_url: result.user.profile_image_url,
-      is_verified: result.user.is_verified,
-    }), {
-      httpOnly: false, // Allow client-side access
-      secure: isProduction,
-      sameSite: 'Strict',
-      maxAge: 15 * 60, // 15 minutes
-      path: '/',
+      isNewUser: result.isNewUser,
+      hasAccessToken: !!result.accessToken,
+      hasRefreshToken: !!result.refreshToken,
     });
 
-    // Get role-based redirect URL
-    const finalRedirectUrl = getRoleBasedRedirectUrl(result.user.role, requestedRedirectTo);
+    // Set secure cookies (following login route pattern for consistency)
+    const isProduction = process.env.NODE_ENV === 'production';
 
-    // Set cookies for the frontend (following login route pattern)
+    // Access token: Allow JavaScript access for API calls (matches login.ts)
     setCookie(c, 'accessToken', result.accessToken, {
       httpOnly: false, // Allow JavaScript access for API calls
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 15 * 60, // 15 minutes (match backend)
+      secure: isProduction,
+      sameSite: 'lax', // Use 'lax' for OAuth redirects to work properly
+      maxAge: 15 * 60, // 15 minutes
       path: '/',
     });
 
+    // Refresh token: Keep httpOnly for security
     setCookie(c, 'refreshToken', result.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      httpOnly: true, // Secure, no JavaScript access
+      secure: isProduction,
+      sameSite: 'lax', // Use 'lax' for OAuth redirects
       maxAge: 30 * 24 * 60 * 60, // 30 days
       path: '/',
     });
 
-    // Set user info cookie
+    // Set user info cookie for client-side access
     const userInfo = {
       id: result.user.id,
       email: result.user.email,
@@ -238,11 +239,14 @@ app.get('/callback', async (c) => {
 
     setCookie(c, 'userInfo', JSON.stringify(userInfo), {
       httpOnly: false, // Allow client access
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: isProduction,
+      sameSite: 'lax', // Use 'lax' for OAuth redirects
       maxAge: 15 * 60, // 15 minutes
       path: '/',
     });
+
+    // Get role-based redirect URL
+    const finalRedirectUrl = getRoleBasedRedirectUrl(result.user.role, requestedRedirectTo);
 
     // Redirect to frontend with success
     const successUrl = `${process.env.FRONTEND_URL}${finalRedirectUrl}?auth=success${result.isNewUser ? '&new_user=true' : ''}`;
