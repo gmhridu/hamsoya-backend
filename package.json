@@ -31,6 +31,7 @@
     "@types/express-session": "^1.18.2",
     "@types/passport": "^1.0.17",
     "@types/passport-google-oauth20": "^2.0.16",
+    "add": "^2.0.6",
     "bcryptjs": "^3.0.2",
     "connect-redis": "^9.0.0",
     "crypto-js": "^4.2.0",
@@ -45,6 +46,7 @@
     "nodemailer": "^7.0.9",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
+    "resend": "^6.2.0",
     "superjson": "^2.2.2",
     "zod": "^4.1.12"
   },

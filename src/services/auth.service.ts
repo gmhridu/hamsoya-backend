@@ -103,18 +103,33 @@ export class AuthService {
       await sendEnhancedOTPVerificationEmail(email, userName, otp, this.env);
 
     } catch (error) {
+      console.error(`Email sending failed for ${email}:`, {
+        error: error instanceof Error ? error.message : error,
+        email: email,
+        name: userName,
+        otp: otp,
+        env: {
+          NODE_ENV: process.env.NODE_ENV,
+          hasSMTPCredentials: !!(process.env.SMTP_USER && process.env.SMTP_PASSWORD),
+          smtpHost: process.env.SMTP_HOST,
+          smtpPort: process.env.SMTP_PORT,
+        }
+      });
+
       // Fallback to legacy email template if EJS fails
       try {
         await sendOTPVerificationEmail(email, userName, otp, this.env);
       } catch (fallbackError) {
+        console.error(`Both enhanced and legacy email sending failed for ${email}:`, fallbackError);
+
         // Always throw error in production, provide helpful feedback in development
         if (process.env.NODE_ENV === 'development') {
           console.error('Email sending failed in development:', fallbackError);
           return {
-            message: `Verification OTP generated but email sending failed. OTP: ${otp}`,
+            message: `Verification OTP generated but email sending failed. OTP: ${otp}. Error: ${fallbackError instanceof Error ? fallbackError.message : fallbackError}`,
           };
         }
-        throw new Error('Failed to send verification email. Please check your email configuration.');
+        throw new Error('Failed to send verification email. Please check your email configuration and SMTP credentials.');
       }
     }
 
