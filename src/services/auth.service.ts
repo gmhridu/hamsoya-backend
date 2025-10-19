@@ -96,11 +96,12 @@ export class AuthService {
     // Use name from registration data or existing user
     const userName = name || registrationData?.name || user?.name || 'User';
 
-    // Send email using optimized enhanced templates
+    // Send email using Resend (no SMTP fallback)
     try {
-      // Always use professional EJS email templates for consistent branding
-      const { sendEnhancedOTPVerificationEmail } = require('../lib/sendEmail');
-      await sendEnhancedOTPVerificationEmail(email, userName, otp, this.env);
+      const { sendOTPVerificationEmail } = require('../lib/sendEmail');
+      await sendOTPVerificationEmail(email, userName, otp, this.env);
+
+      console.log(`✅ OTP email sent successfully to ${email}`);
 
     } catch (error) {
       console.error(`Email sending failed for ${email}:`, {
@@ -110,27 +111,13 @@ export class AuthService {
         otp: otp,
         env: {
           NODE_ENV: process.env.NODE_ENV,
-          hasSMTPCredentials: !!(process.env.SMTP_USER && process.env.SMTP_PASSWORD),
-          smtpHost: process.env.SMTP_HOST,
-          smtpPort: process.env.SMTP_PORT,
+          hasResendAPIKey: !!process.env.RESEND_API_KEY,
+          resendAPIKeyPrefix: process.env.RESEND_API_KEY?.substring(0, 10) + '...',
         }
       });
 
-      // Fallback to legacy email template if EJS fails
-      try {
-        await sendOTPVerificationEmail(email, userName, otp, this.env);
-      } catch (fallbackError) {
-        console.error(`Both enhanced and legacy email sending failed for ${email}:`, fallbackError);
-
-        // Always throw error in production, provide helpful feedback in development
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Email sending failed in development:', fallbackError);
-          return {
-            message: `Verification OTP generated but email sending failed. OTP: ${otp}. Error: ${fallbackError instanceof Error ? fallbackError.message : fallbackError}`,
-          };
-        }
-        throw new Error('Failed to send verification email. Please check your email configuration and SMTP credentials.');
-      }
+      // No fallback - Resend is the only option now
+      throw new Error('Failed to send verification email. Please check your Resend API key configuration.');
     }
 
     return { message: 'Verification OTP sent to your email' };

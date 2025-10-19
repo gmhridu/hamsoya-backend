@@ -28,16 +28,18 @@ app.get('/health/email', async (c) => {
     return c.json({
       status: emailHealth ? 'healthy' : 'unhealthy',
       timestamp: new Date().toISOString(),
-      service: 'email-service',
+      service: 'resend-email-service',
       healthy: emailHealth,
       configuration: emailInfo,
+      note: 'Using Resend only - no SMTP fallback',
     });
   } catch (error) {
     return c.json({
       status: 'error',
       timestamp: new Date().toISOString(),
-      service: 'email-service',
+      service: 'resend-email-service',
       error: error instanceof Error ? error.message : 'Unknown error',
+      note: 'Resend service not properly configured',
     }, 500);
   }
 });
