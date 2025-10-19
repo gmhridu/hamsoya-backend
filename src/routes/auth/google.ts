@@ -205,54 +205,80 @@ app.get('/callback', async (c) => {
       hasRefreshToken: !!result.refreshToken,
     });
 
-    // Set secure cookies (following login route pattern for consistency)
+    // For cross-domain OAuth, we'll redirect with tokens in URL fragment
+    // and let the frontend set the cookies itself
     const isProduction = process.env.NODE_ENV === 'production';
 
-    // Access token: Allow JavaScript access for API calls (matches login.ts)
-    setCookie(c, 'accessToken', result.accessToken, {
-      httpOnly: false, // Allow JavaScript access for API calls
-      secure: isProduction,
-      sameSite: 'lax', // Use 'lax' for OAuth redirects to work properly
-      maxAge: 15 * 60, // 15 minutes
-      path: '/',
-    });
-
-    // Refresh token: Keep httpOnly for security
-    setCookie(c, 'refreshToken', result.refreshToken, {
-      httpOnly: true, // Secure, no JavaScript access
-      secure: isProduction,
-      sameSite: 'lax', // Use 'lax' for OAuth redirects
-      maxAge: 30 * 24 * 60 * 60, // 30 days
-      path: '/',
-    });
-
-    // Set user info cookie for client-side access
-    const userInfo = {
-      id: result.user.id,
-      email: result.user.email,
-      name: result.user.name,
-      role: result.user.role,
-      profileImage: result.user.profile_image_url,
-      isVerified: result.user.is_verified,
-      authMethod: 'oauth',
-    };
-
-    setCookie(c, 'userInfo', JSON.stringify(userInfo), {
-      httpOnly: false, // Allow client access
-      secure: isProduction,
-      sameSite: 'lax', // Use 'lax' for OAuth redirects
-      maxAge: 15 * 60, // 15 minutes
-      path: '/',
-    });
-
-    // Get role-based redirect URL
+    // Get role-based redirect URL first
     const finalRedirectUrl = getRoleBasedRedirectUrl(result.user.role, requestedRedirectTo);
 
-    // Redirect to frontend with success
-    const successUrl = `${process.env.FRONTEND_URL}${finalRedirectUrl}?auth=success${result.isNewUser ? '&new_user=true' : ''}`;
+    if (isProduction) {
+      // In production, redirect with tokens in URL fragment for frontend to handle
+      const frontendUrl = process.env.FRONTEND_URL || 'https://hamsoya.vercel.app';
+      const tokenData = {
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+        user: {
+          id: result.user.id,
+          email: result.user.email,
+          name: result.user.name,
+          role: result.user.role,
+          profileImage: result.user.profile_image_url,
+          isVerified: result.user.is_verified,
+        },
+        isNewUser: result.isNewUser,
+        timestamp: Date.now(),
+      };
 
-    console.log(`[GOOGLE-OAUTH] Role-based redirect: ${result.user.role} -> ${finalRedirectUrl}`);
-    return c.redirect(successUrl);
+      // Encode token data for URL
+      const encodedTokenData = Buffer.from(JSON.stringify(tokenData)).toString('base64url');
+
+      // Redirect to frontend with token data in fragment
+      const successUrl = `${frontendUrl}${finalRedirectUrl}?auth=success&token_data=${encodedTokenData}${result.isNewUser ? '&new_user=true' : ''}`;
+
+      console.log(`[GOOGLE-OAUTH] Redirecting to frontend with token data`);
+      return c.redirect(successUrl);
+    } else {
+      // In development, set cookies normally
+      setCookie(c, 'accessToken', result.accessToken, {
+        httpOnly: false,
+        secure: false, // Allow HTTP in development
+        sameSite: 'lax',
+        maxAge: 15 * 60,
+        path: '/',
+      });
+
+      setCookie(c, 'refreshToken', result.refreshToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60,
+        path: '/',
+      });
+
+      // Set user info cookie
+      const userInfo = {
+        id: result.user.id,
+        email: result.user.email,
+        name: result.user.name,
+        role: result.user.role,
+        profileImage: result.user.profile_image_url,
+        isVerified: result.user.is_verified,
+        authMethod: 'oauth',
+      };
+
+      setCookie(c, 'userInfo', JSON.stringify(userInfo), {
+        httpOnly: false,
+        secure: false,
+        sameSite: 'lax',
+        maxAge: 15 * 60,
+        path: '/',
+      });
+    }
+
+    // This should not be reached in production, but keeping as fallback
+    console.log(`[GOOGLE-OAUTH] Fallback redirect for development`);
+    return c.redirect(`${process.env.FRONTEND_URL}/?auth=success`);
 
   } catch (error) {
     console.error('Google OAuth callback error:', error);
