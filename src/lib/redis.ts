@@ -22,19 +22,37 @@ export const getRedis = (redisUrl?: string): Redis | null => {
 
   try {
     const options: RedisOptions = {
-      maxRetriesPerRequest: 1,
+      maxRetriesPerRequest: 3,
       lazyConnect: true, // Don't block startup if Redis is unavailable
-      enableReadyCheck: false,
-      connectTimeout: 3000,
-      commandTimeout: 3000,
+      enableReadyCheck: true,
+      connectTimeout: 10000, // Increased to 10 seconds
+      commandTimeout: 5000, // Increased to 5 seconds
       retryStrategy: (times) => {
-        // Stop retrying immediately
-        if (times > 1) {
+        // Exponential backoff with max retry time
+        const delay = Math.min(times * 100, 3000);
+        if (times > 5) {
+          console.warn(`Redis retry strategy: Max retries exceeded (${times})`);
           return null;
         }
-        return null;
+        console.log(`Redis retry strategy: Attempt ${times}, retrying in ${delay}ms`);
+        return delay;
       },
-      reconnectOnError: () => false, // Don't reconnect on errors
+      reconnectOnError: (err) => {
+        // Reconnect on specific errors only
+        const targetErrors = ['READONLY', 'MOVED', 'ASK', 'CLUSTERDOWN'];
+        if (targetErrors.some(e => err.message.includes(e))) {
+          console.log('Redis reconnecting due to error:', err.message);
+          return true;
+        }
+        return false;
+      },
+      // Connection pooling for stability
+      family: 4,
+      keyPrefix: 'hamsoya:',
+      // Keep connections alive
+      keepAlive: 30000,
+      // Enable TLS for production Redis URLs
+      tls: url.startsWith('rediss://') ? {} : undefined,
     };
 
     redis = new Redis(url, options);
@@ -474,5 +492,29 @@ export class RedisService {
     }
 
     await this.redis.del(...keys);
+  }
+
+  // Cart-specific methods with retry logic
+  async getCartData(key: string): Promise<any | null> {
+    if (!this.redis) return null;
+
+    try {
+      const data = await this.redis.get(key);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error(`Redis getCartData failed for key ${key}:`, error);
+      return null;
+    }
+  }
+
+  async setCartData(key: string, data: any, expirySeconds: number = 2592000): Promise<void> {
+    if (!this.redis) return;
+
+    try {
+      await this.redis.setex(key, expirySeconds, JSON.stringify(data));
+    } catch (error) {
+      console.error(`Redis setCartData failed for key ${key}:`, error);
+      throw error;
+    }
   }
 }

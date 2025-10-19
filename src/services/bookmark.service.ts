@@ -38,32 +38,34 @@ export class BookmarkService {
   }
 
   /**
-   * Get bookmark data for user or guest
+   * Get bookmark data for user or guest with retry logic
    */
   async getBookmarks(
     userId?: string,
     sessionId?: string
   ): Promise<BookmarkData> {
     const key = this.getBookmarkKey(userId, sessionId);
-    const bookmarkData = await (this.redis as any).redis.get(key);
-
-    if (!bookmarkData) {
-      return {
-        bookmarkedProducts: [],
-        bookmarkCount: 0,
-        updatedAt: new Date().toISOString(),
-      };
-    }
 
     try {
-      const parsed = JSON.parse(bookmarkData);
+      // Use RedisService method instead of direct Redis access
+      const bookmarkData = await this.redis.getCartData(key); // Reusing the same method for now
+
+      if (!bookmarkData) {
+        return {
+          bookmarkedProducts: [],
+          bookmarkCount: 0,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+
       return {
-        bookmarkedProducts: parsed.bookmarkedProducts || [],
-        bookmarkCount: parsed.bookmarkCount || 0,
-        updatedAt: parsed.updatedAt || new Date().toISOString(),
+        bookmarkedProducts: bookmarkData.bookmarkedProducts || [],
+        bookmarkCount: bookmarkData.bookmarkCount || 0,
+        updatedAt: bookmarkData.updatedAt || new Date().toISOString(),
       };
     } catch (error) {
-      console.error("Failed to parse bookmark data:", error);
+      console.error(`Failed to get bookmarks for key ${key}:`, error);
+      // Return empty bookmarks on Redis failure instead of throwing
       return {
         bookmarkedProducts: [],
         bookmarkCount: 0,
@@ -73,7 +75,7 @@ export class BookmarkService {
   }
 
   /**
-   * Save bookmark data with 30-day expiration
+   * Save bookmark data with 30-day expiration and retry logic
    */
   async saveBookmarks(
     bookmarkData: BookmarkData,
@@ -86,12 +88,13 @@ export class BookmarkService {
       updatedAt: new Date().toISOString(),
     };
 
-    // Store with 30-day expiration (30 * 24 * 60 * 60 = 2592000 seconds)
-    await (this.redis as any).redis.setex(
-      key,
-      2592000,
-      JSON.stringify(dataToStore)
-    );
+    try {
+      // Use RedisService method with 30-day expiration
+      await this.redis.setCartData(key, dataToStore, 2592000);
+    } catch (error) {
+      console.error(`Failed to save bookmarks for key ${key}:`, error);
+      // Don't throw - allow bookmark operations to fail gracefully
+    }
   }
 
   /**

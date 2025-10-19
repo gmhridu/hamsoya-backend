@@ -137,9 +137,20 @@ const authRouter = router({
 
   // Logout (invalidate refresh token)
   logout: protectedProcedure.mutation(async ({ ctx }) => {
-    // In a real implementation, you would invalidate the refresh token
-    // For now, just return success
-    return { message: 'Logged out successfully' };
+    try {
+      const authService = new AuthService(ctx.env);
+
+      // Invalidate all refresh tokens for this user
+      await authService.logout(ctx.auth.user.id);
+
+      console.log(`[TRPC-LOGOUT] User logged out: ${ctx.auth.user.email}`);
+
+      return { message: 'Logged out successfully' };
+    } catch (error) {
+      console.error('[TRPC-LOGOUT] Logout failed:', error);
+      // Don't throw error - logout should always succeed from user perspective
+      return { message: 'Logged out successfully' };
+    }
   }),
 });
 
@@ -284,15 +295,32 @@ const cartRouter = router({
   get: publicProcedure
     .input(z.object({ sessionId: z.string().optional() }).optional())
     .query(async ({ input, ctx }) => {
-      const cartService = new CartService(ctx.env);
-      const userId = ctx.auth.user?.id;
-      const sessionId =
-        input?.sessionId || `guest_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-      const cart = await cartService.getCart(userId, sessionId);
-      return {
-        data: cart,
-        count: cart.totalItems,
-      };
+      try {
+        const cartService = new CartService(ctx.env);
+        const userId = ctx.auth.user?.id;
+        const sessionId =
+          input?.sessionId || `guest_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+
+        console.log(`[TRPC-CART] Getting cart for userId: ${userId}, sessionId: ${sessionId}`);
+
+        const cart = await cartService.getCart(userId, sessionId);
+        return {
+          data: cart,
+          count: cart.totalItems,
+        };
+      } catch (error) {
+        console.error('[TRPC-CART] Failed to get cart:', error);
+        // Return empty cart instead of throwing error
+        return {
+          data: {
+            items: [],
+            totalItems: 0,
+            totalPrice: 0,
+            updatedAt: new Date().toISOString(),
+          },
+          count: 0,
+        };
+      }
     }),
 
   // Add item to cart
@@ -391,15 +419,31 @@ const bookmarkRouter = router({
   get: publicProcedure
     .input(z.object({ sessionId: z.string().optional() }).optional())
     .query(async ({ input, ctx }) => {
-      const bookmarkService = new BookmarkService(ctx.env);
-      const userId = ctx.auth.user?.id;
-      const sessionId =
-        input?.sessionId || `guest_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-      const bookmarks = await bookmarkService.getBookmarks(userId, sessionId);
-      return {
-        data: bookmarks,
-        count: bookmarks.bookmarkCount,
-      };
+      try {
+        const bookmarkService = new BookmarkService(ctx.env);
+        const userId = ctx.auth.user?.id;
+        const sessionId =
+          input?.sessionId || `guest_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+
+        console.log(`[TRPC-BOOKMARKS] Getting bookmarks for userId: ${userId}, sessionId: ${sessionId}`);
+
+        const bookmarks = await bookmarkService.getBookmarks(userId, sessionId);
+        return {
+          data: bookmarks,
+          count: bookmarks.bookmarkCount,
+        };
+      } catch (error) {
+        console.error('[TRPC-BOOKMARKS] Failed to get bookmarks:', error);
+        // Return empty bookmarks instead of throwing error
+        return {
+          data: {
+            bookmarkedProducts: [],
+            bookmarkCount: 0,
+            updatedAt: new Date().toISOString(),
+          },
+          count: 0,
+        };
+      }
     }),
 
   // Add bookmark

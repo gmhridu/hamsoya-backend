@@ -48,14 +48,18 @@ app.post('/', zValidator('json', LoginSchema), async c => {
     const input = c.req.valid('json');
     const authService = new AuthService(c.env);
 
+    console.log(`[LOGIN] Attempting login for email: ${input.email}`);
+
     const result = await authService.login(input);
+
+    console.log(`[LOGIN] Login successful for email: ${input.email}, role: ${result.user.role}`);
 
     // Set secure cookies with enhanced security
     const isProduction = c.env?.NODE_ENV === 'production' || process.env.NODE_ENV === 'production';
 
-    // Access token: Now httpOnly for enhanced security
+    // Access token: Allow JavaScript access for API calls
     setCookie(c, 'accessToken', result.accessToken, {
-      httpOnly: true, // Enhanced security - no JavaScript access
+      httpOnly: false, // Allow JavaScript access for API calls
       secure: isProduction,
       sameSite: 'Strict',
       maxAge: 5 * 60, // 5 minutes = 300 seconds
@@ -99,6 +103,15 @@ app.post('/', zValidator('json', LoginSchema), async c => {
       200
     );
   } catch (error) {
+    console.error(`[LOGIN] Login failed for email: ${c.req.valid('json')?.email || 'unknown'}`, {
+      error: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack : undefined,
+      env: {
+        NODE_ENV: (c.env as any)?.NODE_ENV || process.env.NODE_ENV,
+        hasJWTSecrets: !!((c.env as any)?.JWT_ACCESS_SECRET && (c.env as any)?.JWT_REFRESH_SECRET),
+      }
+    });
+
     if (error instanceof Error) {
       return c.json(errorResponse(error.message), 401);
     }

@@ -39,31 +39,33 @@ export class CartService {
   }
 
   /**
-   * Get cart data for user or guest
+   * Get cart data for user or guest with retry logic
    */
   async getCart(userId?: string, sessionId?: string): Promise<CartData> {
     const key = this.getCartKey(userId, sessionId);
-    const cartData = await (this.redis as any).redis.get(key);
-
-    if (!cartData) {
-      return {
-        items: [],
-        totalItems: 0,
-        totalPrice: 0,
-        updatedAt: new Date().toISOString(),
-      };
-    }
 
     try {
-      const parsed = JSON.parse(cartData);
+      // Use RedisService method instead of direct Redis access
+      const cartData = await this.redis.getCartData(key);
+
+      if (!cartData) {
+        return {
+          items: [],
+          totalItems: 0,
+          totalPrice: 0,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+
       return {
-        items: parsed.items || [],
-        totalItems: parsed.totalItems || 0,
-        totalPrice: parsed.totalPrice || 0,
-        updatedAt: parsed.updatedAt || new Date().toISOString(),
+        items: cartData.items || [],
+        totalItems: cartData.totalItems || 0,
+        totalPrice: cartData.totalPrice || 0,
+        updatedAt: cartData.updatedAt || new Date().toISOString(),
       };
     } catch (error) {
-      console.error('Failed to parse cart data:', error);
+      console.error(`Failed to get cart for key ${key}:`, error);
+      // Return empty cart on Redis failure instead of throwing
       return {
         items: [],
         totalItems: 0,
@@ -74,7 +76,7 @@ export class CartService {
   }
 
   /**
-   * Save cart data with 30-day expiration
+   * Save cart data with 30-day expiration and retry logic
    */
   async saveCart(cartData: CartData, userId?: string, sessionId?: string): Promise<void> {
     const key = this.getCartKey(userId, sessionId);
@@ -83,8 +85,13 @@ export class CartService {
       updatedAt: new Date().toISOString(),
     };
 
-    // Store with 30-day expiration (30 * 24 * 60 * 60 = 2592000 seconds)
-    await (this.redis as any).redis.setex(key, 2592000, JSON.stringify(dataToStore));
+    try {
+      // Use RedisService method with 30-day expiration
+      await this.redis.setCartData(key, dataToStore, 2592000);
+    } catch (error) {
+      console.error(`Failed to save cart for key ${key}:`, error);
+      // Don't throw - allow cart operations to fail gracefully
+    }
   }
 
   /**

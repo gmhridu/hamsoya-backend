@@ -36,6 +36,7 @@ app.use(
       const allowedOrigins = [
         "https://hamsoya.com",
         "https://hamsoya.vercel.app",
+        "https://hamsoya-backend.onrender.com",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
       ];

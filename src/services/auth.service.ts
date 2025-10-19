@@ -107,13 +107,14 @@ export class AuthService {
       try {
         await sendOTPVerificationEmail(email, userName, otp, this.env);
       } catch (fallbackError) {
-        // In development, still provide helpful feedback
+        // Always throw error in production, provide helpful feedback in development
         if (process.env.NODE_ENV === 'development') {
+          console.error('Email sending failed in development:', fallbackError);
           return {
-            message: `Verification OTP generated. Check your email for the verification code.`,
+            message: `Verification OTP generated but email sending failed. OTP: ${otp}`,
           };
         }
-        throw fallbackError;
+        throw new Error('Failed to send verification email. Please check your email configuration.');
       }
     }
 
