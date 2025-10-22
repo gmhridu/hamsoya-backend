@@ -230,11 +230,34 @@ app.get('/callback', async (c) => {
         timestamp: Date.now(),
       };
 
-      // Encode token data for URL
-      const encodedTokenData = Buffer.from(JSON.stringify(tokenData)).toString('base64url');
+      // Encode token data for URL (browser-compatible base64url)
+      const jsonString = JSON.stringify(tokenData);
+      console.log('[GOOGLE-OAUTH] Token data to encode:', {
+        length: jsonString.length,
+        preview: jsonString.substring(0, 100) + '...',
+      });
+
+      // Use base64url encoding (Node.js built-in method)
+      const encodedTokenData = Buffer.from(jsonString, 'utf8')
+        .toString('base64url');
+
+      console.log('[GOOGLE-OAUTH] Token encoding details:', {
+        jsonLength: jsonString.length,
+        encodedLength: encodedTokenData.length,
+        encodedPreview: encodedTokenData.substring(0, 50) + '...',
+        hasPadding: encodedTokenData.includes('='),
+        hasUrlChars: /[+=\/]/.test(encodedTokenData),
+      });
+
+      // base64url from Node.js should not have padding, but let's ensure
+      const cleanTokenData = encodedTokenData.replace(/=/g, '');
+      console.log('[GOOGLE-OAUTH] Final token data for URL:', {
+        finalLength: cleanTokenData.length,
+        finalPreview: cleanTokenData.substring(0, 50) + '...',
+      });
 
       // Redirect to frontend with token data in fragment
-      const successUrl = `${frontendUrl}${finalRedirectUrl}?auth=success&token_data=${encodedTokenData}${result.isNewUser ? '&new_user=true' : ''}`;
+      const successUrl = `${frontendUrl}${finalRedirectUrl}?auth=success&token_data=${cleanTokenData}${result.isNewUser ? '&new_user=true' : ''}`;
 
       console.log(`[GOOGLE-OAUTH] Redirecting to frontend with token data`);
       return c.redirect(successUrl);
